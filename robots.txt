@@ -1,5 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /content/
+Disallow: /tools/
 
 # assets/config.js 의 siteUrl 을 채우고 tools/build-pages.mjs 를 다시 돌리면
 # sitemap.xml 이 생성되고 이 파일에 주소가 들어갑니다.

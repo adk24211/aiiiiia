@@ -100,12 +100,15 @@ npx http-server -p 8099 .       # 로컬에서 띄우기
 이슈로 알려 주세요. 배열도를 눈으로 옮겨 적은 수정은 받지 않습니다 — 그게 이 프로젝트가
 피하려는 오류의 원인입니다.
 
-## 배포
-
-GitHub Pages. `.github/workflows/pages.yml` 이 푸시할 때마다
-검증 3종을 돌리고 통과해야 배포합니다.
+## 배포와 띄우기
 
 저장소 **Settings → Pages → Source** 를 **GitHub Actions** 로 바꾸면 켜집니다.
+그 뒤로는 푸시할 때마다 `.github/workflows/pages.yml` 이 검증 4종(자판 데이터 대조 ·
+계산 골든 벡터 · 파서 테스트 · 색 대비)을 돌리고, 전부 통과해야 배포합니다.
+
+**수익화 순서, 커뮤니티 배포 전략, 노릴 검색어는 [`LAUNCH.md`](LAUNCH.md) 에 정리해 두었습니다.**
+`content/` 의 세 문서(monetization · copy · seo)는 그 근거가 된 조사 원문입니다 —
+사이트에 배포되는 내용이 아니고, `robots.txt` 에서 크롤링을 막아 두었습니다.
 
 ## 수익화 켜기
 

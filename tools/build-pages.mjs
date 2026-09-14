@@ -616,12 +616,15 @@ if (SITE) {
   writeFileSync(join(ROOT, "sitemap.xml"),
     `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
     urls.map((u) => `  <url><loc>${SITE}/${u}</loc></url>`).join("\n") + `\n</urlset>\n`);
-  writeFileSync(join(ROOT, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
+  writeFileSync(join(ROOT, "robots.txt"),
+    `User-agent: *\nAllow: /\nDisallow: /content/\nDisallow: /tools/\n\nSitemap: ${SITE}/sitemap.xml\n`);
   console.log("wrote sitemap.xml, robots.txt");
 } else {
   // 주소를 모르는 채로 가짜 sitemap 을 올리면 색인에 해가 된다.
   writeFileSync(join(ROOT, "robots.txt"),
-    `User-agent: *\nAllow: /\n\n# assets/config.js 의 siteUrl 을 채우고 tools/build-pages.mjs 를 다시 돌리면\n# sitemap.xml 이 생성되고 이 파일에 주소가 들어갑니다.\n`);
+    `User-agent: *\nAllow: /\nDisallow: /content/\nDisallow: /tools/\n\n` +
+    `# assets/config.js 의 siteUrl 을 채우고 tools/build-pages.mjs 를 다시 돌리면\n` +
+    `# sitemap.xml 이 생성되고 이 파일에 주소가 들어갑니다.\n`);
   try { unlinkSync(join(ROOT, "sitemap.xml")); } catch {}
   console.log("siteUrl 이 비어 있어 sitemap 은 만들지 않았습니다 (robots.txt 만 갱신)");
 }
