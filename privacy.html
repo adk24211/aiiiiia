@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>개인정보처리방침 — 손가락 마일리지</title>
+<meta name="description" content="손가락 마일리지는 서버가 없는 정적 사이트로, 이용자가 넣은 글과 파일을 외부로 전송하지 않습니다.">
+<meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121216" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="개인정보처리방침 — 손가락 마일리지">
+<meta property="og:description" content="손가락 마일리지는 서버가 없는 정적 사이트로, 이용자가 넣은 글과 파일을 외부로 전송하지 않습니다.">
+<meta property="og:image" content="og.png">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="privacy.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316161a'/%3E%3Crect x='6' y='11' width='7' height='7' rx='1.6' fill='%23f7f4ee'/%3E%3Crect x='15.5' y='11' width='7' height='7' rx='1.6' fill='%23b03a12'/%3E%3Crect x='6' y='20' width='16.5' height='4.5' rx='1.4' fill='%23f7f4ee' opacity='.55'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+<meta name="robots" content="index,follow">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+<header class="masthead"><div class="wrap">
+  <a class="brand" href="./">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="7" fill="currentColor"></rect>
+      <rect x="6" y="11" width="7" height="7" rx="1.6" fill="var(--paper)"></rect>
+      <rect x="15.5" y="11" width="7" height="7" rx="1.6" fill="var(--accent)"></rect>
+      <rect x="6" y="20" width="16.5" height="4.5" rx="1.4" fill="var(--paper)" opacity=".55"></rect>
+    </svg><span>손가락 마일리지</span></a>
+  <nav aria-label="사이트"><a class="btn btn-primary" href="./">내 글로 계산해 보기</a></nav>
+</div></header>
+<main id="main">
+<section><div class="wrap" style="max-width:44rem">
+  <h1>개인정보처리방침</h1>
+  <p class="lede">이 사이트는 이용자의 개인정보를 수집하지 않습니다. 아래는 그 사실을 구체적으로 확인해 드리는 문서입니다.</p>
+
+  <h2>1. 이 사이트의 구조</h2>
+  <p>손가락 마일리지는 서버가 없는 정적 웹사이트입니다. HTML·CSS·JavaScript 파일만 내려받아 이용자의
+     브라우저에서 실행되며, 계산을 처리하는 서버나 데이터베이스가 존재하지 않습니다.</p>
+
+  <h2>2. 이용자가 입력한 글과 파일</h2>
+  <p>텍스트 입력란에 붙여 넣은 글과, 선택한 카카오톡 대화 파일은 <strong>브라우저 메모리 안에서만</strong>
+     읽고 계산합니다. 어떤 형태로도 외부로 전송하지 않으며, 전송하는 코드 자체가 포함되어 있지 않습니다.
+     페이지를 닫거나 새로고침하면 즉시 사라집니다.</p>
+  <p>이 점은 브라우저 개발자 도구의 네트워크 탭을 열어 두고 파일을 넣어 보시면 직접 확인할 수 있습니다.
+     소스 코드도 전부 공개되어 있습니다.</p>
+
+  <h2>3. 브라우저에 저장되는 값</h2>
+  <p>이용자 편의를 위해 다음 값만 브라우저의 로컬 저장소(localStorage)에 남습니다. 이 값은 이용자의 기기를
+     떠나지 않으며, 브라우저 설정에서 언제든 삭제할 수 있습니다.</p>
+  <ul>
+    <li><span class="mono">km.theme</span> — 밝은 화면 / 어두운 화면 선택</li>
+    <li><span class="mono">km.unlock</span> — 고해상도 내려받기 잠금 해제 여부 (해당 기능을 이용한 경우에만)</li>
+  </ul>
+  <p>대화 파일의 내용이나 참여자 이름은 저장하지 않습니다. 주소창 링크에 담기지도 않습니다.</p>
+
+  <h2>4. 접속 기록</h2>
+  <p>이 사이트는 GitHub Pages를 통해 제공됩니다. 웹사이트 제공 과정에서 GitHub이 접속 로그(IP 주소 등)를
+     수집할 수 있으며, 이는 운영자가 접근하거나 통제할 수 없는 영역입니다. 자세한 내용은 GitHub의
+     개인정보처리방침을 참고해 주세요.</p>
+
+  <h2>5. 광고와 쿠키</h2>
+  <p id="adsNote">현재 이 사이트에는 광고가 게재되어 있지 않으며, 광고용 쿠키를 사용하지 않습니다.
+     추후 광고를 게재하게 되면 이 항목을 먼저 갱신하고, 광고 제공자가 사용하는 쿠키의 종류와
+     거부 방법을 함께 안내하겠습니다.</p>
+
+  <h2>6. 만 14세 미만 이용자</h2>
+  <p>이 사이트는 어떤 개인정보도 수집하지 않으므로 연령에 따른 별도 처리 절차를 두고 있지 않습니다.</p>
+
+  <h2>7. 문의</h2>
+  <p>이 방침에 대한 문의나 정정 요청은 <a href="https://github.com/adk24211/aiiiiia/issues" rel="noopener">GitHub 이슈</a>로
+     남겨 주세요.</p>
+
+  <p class="small" id="privacyDate">이 방침은 사이트 공개일부터 적용됩니다. 내용이 바뀌면 이 페이지에서 알립니다.</p>
+</div></section></main>
+<footer><div class="wrap">
+  <ul style="list-style:none;padding:0;margin:0 0 1rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.88rem">
+    <li><a href="./">계산기</a></li>
+    <li><a href="dubeolsik.html">두벌식</a></li>
+    <li><a href="sebeolsik-390.html">세벌식 390</a></li>
+    <li><a href="sebeolsik-final.html">세벌식 최종</a></li>
+    <li><a href="privacy.html">개인정보처리방침</a></li>
+  </ul>
+  <p class="tiny">자판 배열 데이터는 <a href="https://github.com/libhangul/libhangul" rel="noopener">libhangul</a>
+    원본에서 기계 추출했습니다 · 코드 MIT</p>
+</div></footer>
+</body>
+</html>

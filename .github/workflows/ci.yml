@@ -1,0 +1,29 @@
+name: 검증
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: 자판 데이터를 libhangul 원본과 대조
+        run: node tools/verify-layouts.mjs
+      - name: 계산 엔진 골든 벡터
+        run: node tools/test-engine.mjs
+      - name: 카카오톡 파서
+        run: node tools/test-kakao.mjs
+      - name: 생성 파일이 최신인지 확인
+        run: |
+          node tools/build-pages.mjs
+          if ! git diff --quiet -- '*.html' sitemap.xml robots.txt; then
+            echo "::error::생성된 페이지가 최신이 아닙니다. node tools/build-pages.mjs 를 돌리고 커밋하세요."
+            git diff --stat
+            exit 1
+          fi

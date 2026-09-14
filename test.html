@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>계산 자가 검증 — 손가락 마일리지</title>
+<meta name="robots" content="noindex">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="masthead"><div class="wrap">
+  <a class="brand" href="./"><span>손가락 마일리지</span></a>
+</div></header>
+<main><section><div class="wrap">
+  <h1>계산 자가 검증</h1>
+  <p class="lede">이 페이지는 계산 엔진이 알려진 정답을 그대로 재현하는지 브라우저에서 직접 확인합니다.
+    하나라도 어긋나면 붉게 표시됩니다.</p>
+  <p class="small">기대값은 libhangul 자판표에서 유도한 타건열과, 손으로 계산해 검증한 이동거리입니다.
+    계산이 바뀌었는데 이 표가 통과한다면 기대값이 잘못된 것이니 이슈로 알려 주세요.</p>
+  <p id="summary" class="headline" role="status" style="margin:1.2rem 0"></p>
+  <div class="table-scroll"><table id="out">
+    <caption>골든 벡터 대조 결과</caption>
+    <thead><tr><th scope="col">검사</th><th scope="col">기대</th><th scope="col">실제</th><th scope="col">결과</th></tr></thead>
+    <tbody></tbody>
+  </table></div>
+</div></section></main>
+<script src="assets/layouts.js"></script>
+<script src="assets/engine.js"></script>
+<script src="assets/tests.js"></script>
+<script>
+(function () {
+  var res = window.KM_TESTS.run();
+  var tb = document.querySelector("#out tbody");
+  tb.innerHTML = res.rows.map(function (r) {
+    return "<tr><th scope=\"row\">" + r.name + "</th><td class=\"mono\">" + r.want +
+      "</td><td class=\"mono\">" + r.got + "</td><td style=\"font-weight:700;color:" +
+      (r.ok ? "var(--good)" : "var(--accent)") + "\">" + (r.ok ? "통과" : "실패") + "</td></tr>";
+  }).join("");
+  document.getElementById("summary").innerHTML =
+    "<span class=\"eyebrow\">자가 검증</span><span class=\"bignum\" style=\"font-size:2.6rem\">" +
+    res.pass + " / " + res.rows.length + "</span>" +
+    (res.fail ? "<strong style=\"color:var(--accent)\">" + res.fail + "건 실패</strong>" :
+                "<span>모두 통과했습니다.</span>");
+  document.title = (res.fail ? "실패 " + res.fail + "건 — " : "전부 통과 — ") + document.title;
+})();
+</script>
+</body>
+</html>
