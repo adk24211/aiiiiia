@@ -516,7 +516,8 @@
 
     sec.hidden = false;
     slot.innerHTML = '<div class="promo"><h2 style="margin:0"><span class="promo-label">광고</span> 이런 게 도움이 될 수 있습니다</h2>' +
-      '<p class="tiny" style="margin:.5rem 0 0">이 페이지는 쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p><ul>' +
+      '<p class="ad-disclosure" role="note"><b>광고</b> · 이 섹션은 쿠팡 파트너스 활동의 일환으로, ' +
+      '이에 따른 일정액의 수수료를 제공받습니다.</p><ul>' +
       items.slice(0, 3).map(function (it) {
         return '<li><a href="' + esc(it.url) + '" rel="nofollow sponsored noopener" target="_blank"><strong>' +
           esc(it.q) + "</strong></a><br><span class=\"tiny\">" + esc(it.why) + "</span></li>";

@@ -140,7 +140,9 @@
     var to = $("#dateTo").value ? new Date($("#dateTo").value + "T23:59:59").getTime() : null;
     S.text = window.KM_KAKAO.textOf(p, { speakers: set, from: from, to: to });
     S.source = "kakao";
-    S.kakaoLabel = (picked.length === 1 ? picked[0] + "님" : picked.length ? picked.length + "명" : "전체") +
+    // 카톡 내보내기에는 화자가 "나"로 나오는 경우가 있다 — "나님"이 되지 않게
+    S.kakaoLabel = (picked.length === 1 ? picked[0] + (/^(나|내)$/.test(picked[0]) ? "" : "님")
+                    : picked.length ? picked.length + "명" : "전체") +
       (p.first ? " · " + ymd(from || p.first) + "~" + ymd(to || p.last) : "");
     src.value = "";
     A.render();
@@ -445,7 +447,9 @@
       '<thead><tr><th scope="col">항목</th><th scope="col">출처</th></tr></thead><tbody>' +
       m.sources.map(function (s) {
         return '<tr><th scope="row">' + esc(s[0]) + "</th><td>" + s[1] +
-          (s[2] ? ' <a href="' + esc(s[2]) + '" rel="noopener">↗</a>' : "") + "</td></tr>";
+          (s[2] ? ' <a class="ext" href="' + esc(s[2]) + '" rel="noopener">' +
+            '<span aria-hidden="true">↗</span><span class="visually-hidden">' +
+            esc(s[0]) + ' 출처 열기</span></a>' : "") + "</td></tr>";
       }).join("") + "</tbody></table></div>";
 
     if (CFG.repoUrl)
