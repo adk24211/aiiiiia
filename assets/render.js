@@ -166,9 +166,9 @@
     } else {
       var cmp = rest.map(function (r) {
         // 아주 짧은 글에서는 한쪽이 0 이 되어 ±100% 같은 무의미한 값이 나온다
+        var pp = Math.round((r.mm - base.mm) / Math.max(1e-9, base.mm) * 100);
         var pctTxt = (base.mm < 1 || r.mm < 1) ? "" :
-          " <strong>(" + (r.mm >= base.mm ? "+" : "") +
-          nf((r.mm - base.mm) / base.mm * 100, 0) + "%)</strong>";
+          " <strong>(" + (pp === 0 ? "차이 없음" : (pp > 0 ? "+" : "") + nf(pp, 0) + "%") + ")</strong>";
         return J(r.layout.short, "은") + " " + distStr(r.mm) + pctTxt;
       }).join(", ");
       v = "같은 글을 " + cmp + ".";
@@ -298,11 +298,11 @@
         if (lab) {
           var head = lab.base.join("") || "·";
           var sh = lab.shift.join("");
-          txt(x + .5, i + .58, head, 6.4, col.ink, 700);
-          if (sh) txt(x + .5, i + .26, sh, 3.9, col.ink, 600);
-          txt(x + .5, i + .92, n ? String(n) : "0", 4.1, col.ink, 500);
+          txt(x + .5, i + .6, head, 6.9, col.ink, 700);
+          if (sh) txt(x + .5, i + .27, sh, 4.2, col.ink, 600);
+          txt(x + .5, i + .93, n ? String(n) : "0", 4.7, col.ink, 500);
         } else {
-          txt(x + .5, i + .62, key === "\\" ? "\\" : key, 4.6, "var(--ink-3)", 400);
+          txt(x + .5, i + .62, key === "\\" ? "\\" : key, 4.7, "var(--ink-3)", 400);
         }
       }
     }
@@ -318,8 +318,9 @@
     txt(6.875, 4.55, "스페이스 " + nf(res.spaces), 5, "var(--ink-2)", 600);
 
     var desc = L.name + ": 가장 많이 누른 키는 " + res.topKeys.slice(0, 3).map(function (k) {
-      return k.key + " " + k.n + "회";
-    }).join(", ") + ". 총 " + nf(res.keyStrokes) + "회 타건.";
+      return k.key + " " + k.n + "번";
+    }).join(", ") + ". 자모 글쇠를 모두 " + nf(res.keyStrokes) + "번 눌렀습니다 " +
+      "(스페이스와 시프트를 더한 총 타건은 " + nf(res.totalStrokes) + "회).";
 
     return '<svg viewBox="0 0 ' + W.toFixed(1) + " " + H.toFixed(1) + '" role="img" ' +
       'aria-labelledby="' + idBase + 't ' + idBase + 'd"><title id="' + idBase + 't">' +
@@ -328,7 +329,13 @@
   }
 
   function renderHeatmaps(a) {
-    $("#heatmaps").innerHTML = a.results.map(function (res, i) {
+    // 다시 그리기 전에 펼쳐 둔 표와 포커스를 기억한다
+    var box = $("#heatmaps");
+    var open = $$("details", box).map(function (d) { return d.open; });
+    var focusIdx = -1, focusables = $$("summary, .kbd", box);
+    focusables.forEach(function (el, i) { if (el === document.activeElement) focusIdx = i; });
+
+    box.innerHTML = a.results.map(function (res, i) {
       var L = res.layout, id = "hm" + i;
       var rows = [];
       for (var c = 0; c < 128; c++) if (res.keyCount[c]) rows.push([String.fromCharCode(c), res.keyCount[c]]);
@@ -348,16 +355,23 @@
         }).join("") + "</tbody></table></div>";
 
       return '<div class="kbd-block"><div class="kbd-head"><h3>' + esc(L.name) + "</h3>" +
-        '<span class="small">' + esc(L.note || "") + " · 타건 " + nf(res.keyStrokes) +
-        "회 · 이동 " + distStr(res.mm) + "</span></div>" +
+        '<span class="small">' + esc(L.note || "") + " · 글쇠 " + nf(res.keyStrokes) +
+        "번 · 이동 " + distStr(res.mm) + "</span></div>" +
         '<div class="kbd">' + heatSvg(L, res, id) + "</div>" +
+        '<p class="scroll-hint">화면이 좁아 자판이 잘렸습니다. 옆으로 밀어서 보거나, 아래 표로 보세요.</p>' +
         '<p class="legend"><span>적게</span><span class="swatches">' +
         [0, .25, .5, .75, 1].map(function (t) {
           return '<span class="sw" style="background:' + heatColor(t).fill + '"></span>';
         }).join("") + "</span><span>많이</span>" +
         '<span>· 굵은 테두리 = 가장 많이 누른 5개 키</span></p>' +
-        "<details><summary>이 자판 숫자로 보기</summary>" + tbl + "</details></div>";
+        "<details><summary>" + esc(L.short) + " 숫자로 보기</summary>" + tbl + "</details></div>";
     }).join("");
+
+    $$("details", box).forEach(function (d, i) { if (open[i]) d.open = true; });
+    if (focusIdx >= 0) {
+      var again = $$("summary, .kbd", box)[focusIdx];
+      if (again) again.focus();
+    }
   }
 
   /* ------------------------------------------------------ 손가락 부담 */
@@ -416,33 +430,45 @@
       var head = J(base.layout.short, "으로") + " 이 글을 치면 손가락이 " + distStr(base.mm) + " 움직입니다.";
       if (base.mm >= 1 && far.mm >= 1) {
         var diff = (far.mm - base.mm) / base.mm * 100;
-        head += " " + J(far.layout.short, "이었") + "다면 " + distStr(far.mm) + " — " +
-          nf(Math.abs(diff), 0) + "% " + (diff >= 0 ? "더 멉니다" : "덜 갑니다") + ".";
+        var shown = Math.round(Math.abs(diff));
+        head += " " + J(far.layout.short, "이었") + "다면 " + distStr(far.mm) +
+          (shown === 0 ? " — 사실상 같습니다."
+                       : " — " + nf(shown, 0) + "% " + (diff >= 0 ? "더 멉니다" : "덜 갑니다") + ".");
       }
       out.push([head, "1"]);
     }
     var minShift = rs.reduce(function (p, c) { return c.shifts < p.shifts ? c : p; });
-    if (base.shifts - minShift.shifts >= 3)
+    var gainLine = base.shifts - minShift.shifts >= 3;
+    if (gainLine)
       out.push([J(minShift.layout.short, "은") + " 시프트를 " + nf(base.shifts) + "회에서 " +
         nf(minShift.shifts) + "회로 줄입니다. 새끼손가락이 그만큼 덜 뻗습니다.", "2"]);
 
     var maxNum = rs.reduce(function (p, c) { return c.numRowPct > p.numRowPct ? c : p; });
-    if (maxNum.numRowPct - base.numRowPct >= 3)
-      out.push(["대신 " + J(maxNum.layout.short, "은") + " 숫자행 타건이 " + pct(base.numRowPct) + " → " +
+    if (maxNum.numRowPct - base.numRowPct >= 3) {
+      // '대신'은 앞에서 말한 이득의 대가를 말할 때만. 주어까지 같아야 말이 된다.
+      var lead2 = (gainLine && maxNum.layout.id === minShift.layout.id) ? "대신 " : "";
+      out.push([lead2 + J(maxNum.layout.short, "은") + " 숫자행 타건이 " + pct(base.numRowPct) + " → " +
         pct(maxNum.numRowPct) + "로 늘어, 손이 위로 더 자주 올라갑니다. 이동거리가 늘어나는 주범입니다.", "3"]);
+    }
 
     var minSfb = rs.reduce(function (p, c) { return c.sfbPct < p.sfbPct ? c : p; });
     if (base.sfbPct - minSfb.sfbPct >= 0.5) {
-      var ratio = minSfb.sfbPct > 0 ? base.sfbPct / minSfb.sfbPct : 0;
+      // '배'는 늘어남에 쓰는 말이라 줄어듦에 붙이면 방향이 흐려진다. 감소율로 적는다.
+      var drop = base.sfbPct > 0 ? (base.sfbPct - minSfb.sfbPct) / base.sfbPct * 100 : 0;
       out.push(["같은 손가락이 연달아 걸리는 비율은 " + pct(base.sfbPct, 2) + " → " + pct(minSfb.sfbPct, 2) +
-        (ratio >= 1.5 ? "로, " + nf(ratio, 1) + "배 낮아집니다." : "로 줄어듭니다."), "4"]);
+        (minSfb.sfbPct === 0 ? "로, 아예 사라집니다."
+         : drop >= 30 ? "로, " + nf(drop, 0) + "% 줄어듭니다." : "로 줄어듭니다."), "4"]);
     }
     var maxAlt = rs.reduce(function (p, c) { return c.altPct > p.altPct ? c : p; });
     // 손 교대가 거의 없는 글(ㅋㅋㅋ 같은)에서 "0%로 가장 높습니다"가 나오지 않게
     if (maxAlt.altPct >= 10)
-    out.push([J(maxAlt.layout.short, "이") + " 손 교대율 " + pct(maxAlt.altPct) + "로 가장 높습니다. " +
-      (maxAlt.layout.id === "dubeol" ? "자음은 왼손, 모음은 오른손이라는 구조 때문입니다." :
-       "초성·중성·종성이 손을 번갈아 쓰도록 배치된 결과입니다."), "5"]);
+    // 사용자가 만든 배열에 근거 없는 구조 설명을 붙이지 않는다
+    var why = maxAlt.layout.id === "dubeol"
+      ? " 자음은 왼손, 모음은 오른손이라는 구조 때문입니다."
+      : maxAlt.layout.twoSet === false
+        ? " 초성·중성·종성이 손을 번갈아 쓰도록 배치된 결과입니다."
+        : " 두벌식을 바탕으로 한 배열이라 자음과 모음이 좌우로 갈립니다.";
+    out.push([J(maxAlt.layout.short, "이") + " 손 교대율 " + pct(maxAlt.altPct) + "로 가장 높습니다." + why, "5"]);
 
     var worst = 0;
     for (var f = 1; f < 8; f++) if (base.fingerPct[f] > base.fingerPct[worst]) worst = f;
@@ -490,6 +516,9 @@
       "회 · 시프트 " + nf(base.shifts) + "회", 64, 344);
 
     var max = Math.max.apply(null, a.results.map(function (r) { return r.mm; })) || 1;
+    // 자판이 넷이면 줄 간격을 좁혀 바닥 캡션과 붙지 않게 한다
+    var n = Math.min(4, a.results.length);
+    var step = n >= 4 ? 38 : 44;
     var y = 404;
     a.results.slice(0, 4).forEach(function (r, i) {
       g.fillStyle = "#16161a"; g.font = "600 25px " + FONT;
@@ -499,16 +528,21 @@
       g.fillRect(240, y, Math.max(6, 700 * r.mm / max), 30);
       g.fillStyle = "#4a4a52"; g.font = "500 23px " + FONT;
       g.fillText(distStr(r.mm), 958, y + 23);
-      y += 44;
+      y += step;
     });
 
-    g.fillStyle = "#6f6f79"; g.font = "400 22px " + FONT;
-    var cap = S.kakaoLabel || "직접 붙여 넣은 글";
-    g.fillText(cap, 64, H - 40);
+    // 워터마크 자리를 먼저 잡고, 캡션은 남은 폭에 맞춰 줄인다
+    var mark = CFG.siteUrl ? CFG.siteUrl.replace(/^https?:\/\//, "") : "손가락 마일리지";
     g.textAlign = "right";
     g.fillStyle = "#16161a"; g.font = "700 24px " + FONT;
-    g.fillText(CFG.siteUrl ? CFG.siteUrl.replace(/^https?:\/\//, "") : "손가락 마일리지", W - 64, H - 40);
+    g.fillText(mark, W - 64, H - 40);
+    var markW = g.measureText(mark).width;
     g.textAlign = "left";
+    g.fillStyle = "#6f6f79"; g.font = "400 22px " + FONT;
+    var cap = S.kakaoLabel || "직접 붙여 넣은 글";
+    var room = W - 64 - (64 + markW + 32);
+    while (cap.length > 4 && g.measureText(cap).width > room) cap = cap.slice(0, -2) + "…";
+    g.fillText(cap, 64, H - 40);
   }
 
   /* ------------------------------------------------------------ 추천 */
@@ -517,19 +551,24 @@
     var slot = $("#promoSlot"), sec = $("#promoSection");
     if (!CFG.coupangPartnerId) { sec.hidden = true; slot.innerHTML = ""; return; }
     var base = a.results[0], items = [];
-    function link(q, why) {
-      var url = "https://link.coupang.com/re/AFFSDP?lptag=" + encodeURIComponent(CFG.coupangPartnerId) +
-        "&pageKey=" + encodeURIComponent(q);
+    var LINKS = {};
+    (CFG.coupangLinks || []).forEach(function (l) { if (l && l.key && l.url) LINKS[l.key] = l.url; });
+    function link(key, q, why) {
+      // 직접 발급받은 링크가 있으면 그것을 쓰고, 없으면 파트너스 검색 리다이렉터로.
+      // AFFSDP 는 pageKey 에 숫자 상품ID를 요구하므로 키워드에는 AFFSRP 를 써야 한다.
+      var url = LINKS[key] ||
+        ("https://link.coupang.com/re/AFFSRP?lptag=" + encodeURIComponent(CFG.coupangPartnerId) +
+         "&pageKey=" + encodeURIComponent(q));
       return { url: url, q: q, why: why };
     }
-    if (base.sfbPct > 3) items.push(link("스플릿 키보드", "같은 손가락 연속이 " + pct(base.sfbPct, 2) +
+    if (base.sfbPct > 3) items.push(link("split", "스플릿 키보드", "같은 손가락 연속이 " + pct(base.sfbPct, 2) +
       "로 높습니다. 좌우가 갈라진 자판은 이 겹침을 줄이는 쪽으로 설계돼 있습니다."));
     if (base.fingerPct[0] + base.fingerPct[7] > 24 || base.shiftPct > 5)
-      items.push(link("팜레스트", "새끼손가락과 시프트 부담이 큰 편입니다. 손목 받침은 그 자세를 덜 무리하게 만듭니다."));
-    if (base.numRowPct > 8) items.push(link("텐키리스 키보드", "숫자행을 " + pct(base.numRowPct) +
+      items.push(link("palmrest", "팜레스트", "새끼손가락과 시프트 부담이 큰 편입니다. 손목 받침은 그 자세를 덜 무리하게 만듭니다."));
+    if (base.numRowPct > 8) items.push(link("tkl", "텐키리스 키보드", "숫자행을 " + pct(base.numRowPct) +
       " 쓰고 있습니다. 폭이 좁은 자판은 오른손이 마우스까지 가는 거리도 함께 줄여 줍니다."));
-    if (S.custom) items.push(link("무각인 키캡", "직접 배열을 바꾸셨네요. 각인이 없는 키캡이면 인쇄와 실제가 어긋나지 않습니다."));
-    if (!items.length) items.push(link("키보드 팜레스트", "오래 치는 분들이 가장 먼저 바꾸는 물건입니다."));
+    if (S.custom) items.push(link("keycap", "무각인 키캡", "직접 배열을 바꾸셨네요. 각인이 없는 키캡이면 인쇄와 실제가 어긋나지 않습니다."));
+    if (!items.length) items.push(link("palmrest", "키보드 팜레스트", "오래 치는 분들이 가장 먼저 바꾸는 물건입니다."));
 
     sec.hidden = false;
     slot.innerHTML = '<div class="promo"><h2 style="margin:0"><span class="promo-label">광고</span> 이런 게 도움이 될 수 있습니다</h2>' +
@@ -567,6 +606,25 @@
 
   /* -------------------------------------------------------- 전체 갱신 */
 
+  /* 가로로 밀어야 하는 곳에만 안내를 켠다 (창 크기에 따라 달라지므로 그릴 때마다 확인) */
+  function markScrollables() {
+    $$(".kbd, .table-scroll").forEach(function (el) {
+      var over = el.scrollWidth > el.clientWidth + 2;
+      var hint = el.nextElementSibling;
+      if (hint && hint.className === "scroll-hint") {
+        hint.classList.toggle("is-on", over);
+      } else if (over && !el.previousElementSibling) {
+        /* 표 앞에 안내가 없으면 만들어 붙인다 */
+      }
+      el.setAttribute("tabindex", over ? "0" : "-1");
+      el.setAttribute("role", over ? "region" : "presentation");
+      if (over && !el.getAttribute("aria-label")) {
+        var cap = el.querySelector("caption");
+        el.setAttribute("aria-label", (cap ? cap.textContent.slice(0, 40) : "표") + " — 가로로 스크롤할 수 있습니다");
+      }
+    });
+  }
+
   var liveTimer = null, lastLive = "";
   function render() {
     var a = compute();
@@ -579,6 +637,7 @@
     renderPromo(a);
     renderUnlock();
     drawCard();
+    markScrollables();
 
     var msg = hangulCount(a) === 0 ? "한글이 없어 결과가 비어 있습니다." :
       a.results[0].layout.short + " 기준 " + distStr(a.results[0].mm) + ", 한글 " + nf(hangulCount(a)) + "자.";
@@ -678,7 +737,7 @@
       var maxc = 1, c;
       for (c = 0; c < 128; c++) if (res.keyCount[c] > maxc) maxc = res.keyCount[c];
       g.fillStyle = "#16161a"; g.font = "700 " + px(58) + FONT;
-      g.fillText(res.layout.name + "  ·  " + distStr(res.mm) + "  ·  타건 " + nf(res.keyStrokes) + "회", kbX, y + titleH * 0.7);
+      g.fillText(res.layout.name + "  ·  " + distStr(res.mm) + "  ·  글쇠 " + nf(res.keyStrokes) + "번", kbX, y + titleH * 0.7);
       var top = y + titleH, info = keyLabels(res.layout);
       E.ANSI_ROWS.forEach(function (row, ri) {
         for (var j = 0; j < row.keys.length; j++) {

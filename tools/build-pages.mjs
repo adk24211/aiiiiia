@@ -11,9 +11,11 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 require("../assets/layouts.js");
 require("../assets/engine.js");
 require("../assets/content.js");
+require("../assets/longform.js");
 require("../assets/config.js");
 const D = globalThis.KM_DATA, E = globalThis.KM_ENGINE;
 const C = globalThis.KM_CONTENT, CFG = globalThis.KM_CONFIG || {};
+const LF = globalThis.KM_LONGFORM;
 
 /* siteUrl 을 채우면 canonical·og:image·sitemap 이 절대 주소가 된다.
    비워 두면 상대 경로로 두고 sitemap 은 만들지 않는다 (가짜 주소를 넣지 않기 위해). */
@@ -43,6 +45,7 @@ function shell({ title, desc, canonical, body, extraHead = "" }) {
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
 <meta property="og:image" content="${esc(abs("og.png"))}">
+<meta property="og:url" content="${esc(canonical)}">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${esc(canonical)}">
@@ -61,7 +64,11 @@ function shell({ title, desc, canonical, body, extraHead = "" }) {
     </svg><span>손가락 마일리지</span></a>
   <nav aria-label="사이트"><a class="btn btn-primary" href="./">내 글로 계산해 보기</a></nav>
 </div></header>
-<main id="main">${body}</main>
+<main id="main">
+  <div class="wrap" id="adSlotTop"></div>
+${body}
+  <div class="wrap" id="adSlotBottom"></div>
+</main>
 <footer><div class="wrap">
   <ul style="list-style:none;padding:0;margin:0 0 1rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.88rem">
     <li><a href="./">계산기</a></li>
@@ -75,6 +82,8 @@ function shell({ title, desc, canonical, body, extraHead = "" }) {
   <p class="tiny">자판 배열 데이터는 <a href="https://github.com/libhangul/libhangul" rel="noopener">libhangul</a>
     원본에서 기계 추출했습니다 · 코드 MIT</p>
 </div></footer>
+<script src="assets/config.js"></script>
+<script src="assets/site.js"></script>
 </body>
 </html>
 `;
@@ -170,7 +179,7 @@ const PAGES = {
     title: "세벌식 최종 자판 배열 (3-91) — 전체 배열표와 이동거리 지표",
     desc: "공병우 세벌식 최종(3-91) 자판의 초성·중성·종성 전체 배열표와, 두벌식·세벌식 390과 비교한 손가락 이동거리·시프트·같은 손가락 연속 지표.",
     intro: [
-      "공병우가 마지막으로 손본 배열이라 '최종'이라 부릅니다. 3-91이라는 이름은 작업이 시작된 1991년에서 왔고, 완성은 1992년 초로 전해집니다. 390에서 빠졌던 겹받침까지 <strong>받침 27개 전부에 제 키를 준</strong> 배열입니다.",
+      "공병우가 내놓은 마지막 자판이라 '공병우 최종 자판'이라 불렸습니다. 3-91이라는 이름은 한글문화원이 이 배열을 발표한 1991년에서 왔고, 실제 완성은 1992년 초로 전해집니다. 390에서 빠졌던 겹받침까지 <strong>받침 27개 전부에 제 키를 준</strong> 배열입니다.",
       "받침을 한 번에 치므로 타건 수가 줄고, 초성·중성·종성이 손을 번갈아 쓰도록 배치되어 같은 손가락이 연달아 걸리는 일이 드뭅니다. 390과 비교하면 <strong>초성 19개는 완전히 같고 중성은 ㅒ 한 자리만 다르며</strong>, 진짜 차이는 받침 27자리 중 12자리에 있습니다.",
       "대신 자모 56개를 넣느라 숫자행과 시프트 자리까지 씁니다. 그래서 <strong>타건 수는 줄어도 이동거리는 늘어나는</strong> 역설이 나타납니다."
     ]
@@ -205,9 +214,9 @@ for (const id of D.ORDER) {
     L.twoSet ? " 두벌식에는 받침 전용 키가 없어, 받침은 대응하는 초성 키로 칩니다." :
                " 나머지는 조합 규칙에 따라 두 번에 나눠 칩니다."}</p>
   ${layoutSvg(L)}
-  <p class="legend"><span class="sw" style="background:#e8f0f8;width:14px;height:12px;display:inline-block;border:1px solid var(--line-2)"></span> 초성
-    <span class="sw" style="background:#fdeee5;width:14px;height:12px;display:inline-block;border:1px solid var(--line-2)"></span> 중성
-    <span class="sw" style="background:#eaf3ec;width:14px;height:12px;display:inline-block;border:1px solid var(--line-2)"></span> 받침
+  <p class="legend"><span class="sw" style="background:var(--tint-cho);width:14px;height:12px;display:inline-block;border:1px solid var(--line-2)"></span> 초성
+    <span class="sw" style="background:var(--tint-jung);width:14px;height:12px;display:inline-block;border:1px solid var(--line-2)"></span> 중성
+    <span class="sw" style="background:var(--tint-jong);width:14px;height:12px;display:inline-block;border:1px solid var(--line-2)"></span> 받침
     <span class="sw" style="background:var(--surface-2);width:14px;height:12px;display:inline-block;border:1px solid var(--line-2)"></span> 두 종류가 같이 있는 키
     <span>· 키 위쪽 작은 글자는 시프트를 눌러야 나옵니다</span></p>
 </div></section>
@@ -534,9 +543,9 @@ const privacy = `
     <p>이용자는 언제든지 개인정보의 열람·정정·삭제·처리정지를 요구할 수 있습니다.
       다만 본 사이트는 이용자를 식별할 수 있는 정보를 직접 보유하지 않으므로 개별 이용자에 대한
       열람·정정에 응하지 못할 수 있으며, 이 경우 그 사유를 알려 드립니다.</p>
-    <p>제${ADS_ON ? 5 : 5}조의 사업자가 처리하는 정보에 대해서는 해당 사업자에게 직접 권리를 행사하실 수 있습니다.
-      Google에 대해서는 <a href="https://myaccount.google.com/" rel="noopener">내 Google 계정</a>에서
-      데이터 관리·삭제가 가능합니다.</p>
+    <p>제5조의 사업자가 처리하는 정보에 대해서는 해당 사업자에게 직접 권리를 행사하실 수 있습니다.${
+      CFG.adsenseClient ? ` Google에 대해서는 <a href="https://myaccount.google.com/" rel="noopener">내 Google 계정</a>에서
+      데이터 관리·삭제가 가능합니다.` : ""}</p>
     <p>권리 행사는 제8조의 연락처로 하실 수 있습니다.</p>`)}
 
   ${art(7, "개인정보의 안전성 확보 조치", `<ol>
@@ -611,8 +620,19 @@ console.log(`wrote privacy.html (광고 ${ADS_ON ? "켜짐 — 쿠키·제3자·
   const idx = join(ROOT, "index.html");
   let html = readFileSync(idx, "utf8");
   html = html.replace(/<!-- LD:START -->[\s\S]*?<!-- LD:END -->/, `<!-- LD:START -->${tag}<!-- LD:END -->`);
-  html = html.replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${esc(abs("index.html"))}">`);
+  // 긴 글을 미리 박아 넣는다 — 자바스크립트를 돌리지 않는 크롤러도 본문을 본다
+  const sections = { LEARNBODY: LF.learn(D.ORDER), FAQBODY: LF.faq(), METHODBODY: LF.method() };
+  for (const [k, v] of Object.entries(sections))
+    html = html.replace(new RegExp(`<!-- ${k}:START -->[\\s\\S]*?<!-- ${k}:END -->`),
+                        `<!-- ${k}:START -->${v}<!-- ${k}:END -->`);
+  // 홈은 index.html 이 아니라 루트 주소로 모은다 (색인이 갈리지 않게)
+  const home = SITE ? SITE + "/" : "./";
+  html = html.replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${esc(home)}">`);
+  html = html.replace(/<meta property="og:url" content="[^"]*">/, `<meta property="og:url" content="${esc(home)}">`);
   html = html.replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${esc(abs("og.png"))}">`);
+  if (!SITE)
+    console.warn("참고: assets/config.js 의 siteUrl 이 비어 있어 og:image 가 상대경로입니다.\n" +
+                 "      카톡·X·스레드 미리보기 카드는 절대 주소여야 뜹니다. 도메인을 정하면 채워 주세요.");
   writeFileSync(idx, html);
   console.log("patched index.html (JSON-LD, canonical, og:image)");
 }

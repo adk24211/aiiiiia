@@ -5,6 +5,22 @@
   var D = window.KM_DATA, E = window.KM_ENGINE, C = window.KM_CONTENT;
   var CFG = window.KM_CONFIG || {};
   var A = window.KM_APP, S = A.S;
+
+  /* 긴 글은 계산이 수백 ms 걸린다. 멈춘 것처럼 보이지 않게 먼저 알린다. */
+  function busy() {
+    if (S.text.length < 40000) return;
+    var el = $("#srcStatus");
+    if (el) el.textContent = "계산 중… (" + A.nf(S.text.length) + "자)";
+  }
+
+  /* prefers-reduced-motion 을 켠 사람에게는 부드러운 스크롤을 쓰지 않는다 */
+  function scrollTo(el) {
+    if (!el) return;
+    var reduce = false;
+    try { reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches; }
+    catch (e) {}
+    el.scrollIntoView({ block: "start", behavior: reduce ? "auto" : "smooth" });
+  }
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var esc = A.esc, nf = A.nf, store = A.store;
 
@@ -20,8 +36,10 @@
     else document.documentElement.removeAttribute("data-theme");
     var dark = t === "dark" || (!t && prefersDark());
     var btn = $("#themeToggle");
+    // 토글 버튼의 접근 이름은 '무엇을 켜고 끄는가'여야 한다.
+    // 이름을 동작('밝은 화면으로')으로 두면 aria-pressed 와 앞뒤가 맞지 않는다.
     btn.setAttribute("aria-pressed", dark ? "true" : "false");
-    $("#themeLabel").textContent = dark ? "밝은 화면" : "어두운 화면";
+    $("#themeLabel").textContent = "어두운 화면";
   }
   $("#themeToggle").addEventListener("click", function () {
     var cur = document.documentElement.getAttribute("data-theme");
@@ -29,7 +47,8 @@
     var next = dark ? "light" : "dark";
     store("km.theme", next);
     applyTheme(next);
-    A.render();
+    busy();
+    A.renderSoon(20);
   });
 
   /* ------------------------------------------------------------ 입력 */
@@ -58,7 +77,7 @@
         src.value = p[1]; S.text = p[1]; S.source = i === 0 ? "demo" : "typed";
         S.kakaoLabel = ""; S.kakao = null; $("#kakaoPanel").hidden = true;
         A.render(); writeHash();
-        document.getElementById("results").scrollIntoView({ block: "start", behavior: "smooth" });
+        scrollTo(document.getElementById("results"));
       });
       row.appendChild(b);
     });
@@ -107,8 +126,11 @@
         S.text = text; S.source = "typed"; S.kakaoLabel = "";
         S.fromFile = true;                   // 파일에서 온 글 — 주소창에 넣지 않는다
         src.value = text.length > 20000 ? text.slice(0, 20000) : text;
-        status.textContent = "카카오톡 형식이 아니어서 평문으로 계산했습니다.";
         A.render();
+        // render() 가 srcStatus 를 덮어쓰므로 그 뒤에 알린다
+        status.textContent = text.trim()
+          ? "카카오톡 형식이 아니어서 파일 내용을 그대로 계산했습니다."
+          : "파일이 비어 있습니다.";
       }
     }).catch(function (err) {
       status.textContent = err && err.message ? err.message : "파일을 읽지 못했습니다.";
@@ -135,7 +157,7 @@
     }).join("");
     if (p.first) { $("#dateFrom").value = ymd(p.first); $("#dateTo").value = ymd(p.last); }
     $("#srcStatus").textContent = "대화 파일을 읽었습니다. 아래에서 본인 이름을 고르세요.";
-    panel.scrollIntoView({ block: "start", behavior: "smooth" });
+    scrollTo(panel);
   }
 
   $("#kakaoApply").addEventListener("click", function () {
@@ -152,13 +174,14 @@
     }
     S.text = window.KM_KAKAO.textOf(p, { speakers: set, from: from, to: to });
     S.source = "kakao";
+    S.fromFile = true;
     // 카톡 내보내기에는 화자가 "나"로 나오는 경우가 있다 — "나님"이 되지 않게
     S.kakaoLabel = (picked.length === 1 ? picked[0] + (/^(나|내)$/.test(picked[0]) ? "" : "님")
                     : picked.length ? picked.length + "명" : "전체") +
       (p.first ? " · " + ymd(from || p.first) + "~" + ymd(to || p.last) : "");
     src.value = "";
     A.render();
-    document.getElementById("results").scrollIntoView({ block: "start", behavior: "smooth" });
+    scrollTo(document.getElementById("results"));
   });
 
   $("#kakaoDrop").addEventListener("click", function () {
@@ -178,12 +201,6 @@
     A.renderSoon(20);
   });
 
-  /* 긴 글은 계산이 수백 ms 걸린다. 멈춘 것처럼 보이지 않게 먼저 알린다. */
-  function busy() {
-    if (S.text.length < 40000) return;
-    var el = $("#srcStatus");
-    if (el) el.textContent = "계산 중… (" + A.nf(S.text.length) + "자)";
-  }
 
   /* -------------------------------------------------------- 편집기 */
 
@@ -291,7 +308,7 @@
   $("#editorBase").addEventListener("change", function () {
     S.custom = null; buildEditor(); A.render(); writeHash();
   });
-  $("#editorApply").addEventListener("click", function () { A.render(); msg("비교표를 갱신했습니다."); });
+  $("#editorApply").addEventListener("click", function () { busy(); A.renderSoon(20); msg("비교표를 갱신했습니다."); });
   $("#editorReset").addEventListener("click", function () {
     S.custom = null; buildEditor(); A.render(); writeHash(); msg("되돌렸습니다.");
   });
@@ -320,10 +337,11 @@
     var opt = { model: S.opts.model, unit: S.opts.unit, leadStyle: S.opts.leadStyle };
     var baseMM = E.measure(E.compile(L), dec, opt).mm;
     var out = $("#autoOut");
-    out.innerHTML = '<p class="small" id="optProg" role="status">' + nf(pairs.length) +
-      "가지 교환을 시험하는 중… 0%</p><progress id=\"optBar\" max=\"" + pairs.length + "\" value=\"0\"></progress>";
+    out.innerHTML = '<p class="small" id="optProg" role="status" aria-live="polite">' + nf(pairs.length) +
+      '가지 교환을 시험하는 중…</p><label class="visually-hidden" for="optBar">교환 탐색 진행률</label>' +
+      '<progress id="optBar" max="' + pairs.length + '" value="0"></progress>';
 
-    var results = [], idx = 0, CH = 60;
+    var results = [], idx = 0, CH = 60, lastSpoken = -1;
     optRunning = true;
     $("#autoFind").disabled = true;
     function stop() { optRunning = false; var b = $("#autoFind"); if (b) b.disabled = false; }
@@ -337,8 +355,13 @@
         if (mm < baseMM) results.push({ pair: pairs[idx], mm: mm, gain: (baseMM - mm) / baseMM * 100 });
       }
       bar.value = idx;
-      prog.textContent = nf(pairs.length) + "가지 교환을 시험하는 중… " +
-        nf(idx / pairs.length * 100, 0) + "%";
+      // 눈으로 보는 진행률은 progress 가 보여 준다. 낭독은 25%마다 한 번만.
+      var step25 = Math.floor(idx / pairs.length * 4);
+      if (step25 !== lastSpoken) {
+        lastSpoken = step25;
+        prog.textContent = nf(pairs.length) + "가지 교환을 시험하는 중… " +
+          nf(idx / pairs.length * 100, 0) + "%";
+      }
       if (idx < pairs.length) { requestAnimationFrame(step); return; }
       stop();
       results.sort(function (a, b) { return b.gain - a.gain; });
@@ -354,14 +377,16 @@
         "가지를 다 해봤지만 이 글에서 이동거리를 줄이는 한 번의 교환은 없었습니다.</p>";
       return;
     }
-    out.innerHTML = '<h4 style="margin:.6rem 0 .3rem">이 글 기준, 키 두 개만 바꾼다면</h4>' +
+    out.innerHTML = '<h3 style="margin:.6rem 0 .3rem">이 글 기준, 키 두 개만 바꾼다면</h3>' +
       '<p class="tiny">' + nf(tried) + "가지를 전부 시험했습니다 (앞 " + nf(sampleLen) + "자 표본).</p>" +
       '<ul class="findings">' + top.map(function (r, i) {
         return '<li data-mark="' + (i + 1) + '"><span><strong class="mono">' + esc(r.pair[0]) + " ⇄ " +
           esc(r.pair[1]) + "</strong> — " + esc(A.J(labelFor(L, r.pair[0]).slice(3), "와")) + " " +
           esc(A.J(labelFor(L, r.pair[1]).slice(3), "을")) + " 맞바꾸면 이동거리가 <strong>" +
           nf(r.gain, 1) + "%</strong> 줄어듭니다. " +
-          '<button class="btn" type="button" data-apply="' + i + '">적용</button></span></li>';
+          '<button class="btn" type="button" data-apply="' + i + '">적용' +
+          '<span class="visually-hidden"> — ' + esc(r.pair[0]) + '와 ' + esc(r.pair[1]) + ' 맞바꾸기</span>' +
+          '</button></span></li>';
       }).join("") + "</ul>";
     Array.prototype.slice.call(out.querySelectorAll("[data-apply]")).forEach(function (b) {
       b.addEventListener("click", function () {
@@ -451,32 +476,14 @@
   /* ---------------------------------------------------------- 긴 글 */
 
   function renderLongform() {
-    $("#learnBody").innerHTML = "<h2>세 자판, 뭐가 다른가</h2>" +
-      D.ORDER.map(function (id) {
-        var L = C.layouts[id];
-        return "<h3>" + esc(L.title) + "</h3>" + L.body.map(function (p) { return "<p>" + p + "</p>"; }).join("");
-      }).join("") +
-      '<p class="small">각 자판의 전체 배열표는 ' +
-      '<a href="dubeolsik.html">두벌식</a> · <a href="sebeolsik-390.html">세벌식 390</a> · ' +
-      '<a href="sebeolsik-final.html">세벌식 최종</a> 페이지에 있습니다.</p>';
-
-    $("#faqBody").innerHTML = "<h2>자주 묻는 질문</h2>" + C.faq.map(function (f) {
-      return "<details><summary>" + esc(f[0]) + "</summary><p>" + f[1] + "</p></details>";
-    }).join("");
-
-    var m = C.method;
-    $("#methodBody").innerHTML = "<h2>" + esc(m.title) + "</h2><ol>" +
-      m.steps.map(function (s) { return "<li><strong>" + esc(s[0]) + "</strong> — " + esc(s[1]) + "</li>"; }).join("") +
-      "</ol><h3>이 도구가 하지 못하는 것</h3><ul>" +
-      m.caveats.map(function (c) { return "<li>" + esc(c) + "</li>"; }).join("") +
-      '</ul><h3>출처</h3><div class="table-scroll"><table class="srcs"><caption>계산이 의존하는 모든 외부 데이터</caption>' +
-      '<thead><tr><th scope="col">항목</th><th scope="col">출처</th></tr></thead><tbody>' +
-      m.sources.map(function (s) {
-        return '<tr><th scope="row">' + esc(s[0]) + "</th><td>" + s[1] +
-          (s[2] ? ' <a class="ext" href="' + esc(s[2]) + '" rel="noopener">' +
-            '<span aria-hidden="true">↗</span><span class="visually-hidden">' +
-            esc(s[0]) + ' 출처 열기</span></a>' : "") + "</td></tr>";
-      }).join("") + "</tbody></table></div>";
+    // 빌드 시 index.html 에 미리 박혀 있으면 그대로 둔다 (크롤러가 보는 것과 같은 내용).
+    // 비어 있을 때만 그린다 — 빌드를 안 돌린 사본이나 Artifact 미리보기 대비.
+    var LF = window.KM_LONGFORM;
+    if (LF) {
+      if (!$("#learnBody").children.length) $("#learnBody").innerHTML = LF.learn(D.ORDER);
+      if (!$("#faqBody").children.length) $("#faqBody").innerHTML = LF.faq();
+      if (!$("#methodBody").children.length) $("#methodBody").innerHTML = LF.method();
+    }
 
     if (CFG.repoUrl)
       $("#repoLinkSlot").innerHTML = '<a href="' + esc(CFG.repoUrl) + '" rel="noopener">소스와 이슈</a>';

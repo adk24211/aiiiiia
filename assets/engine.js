@@ -212,15 +212,21 @@
     var prevFinger = -1, prevBase = -1;
     var heldShift = -1;                       // 지금 시프트를 누르고 있는 손가락 (-1 = 안 누름)
 
+    // 홈을 벗어난 손가락만 비트로 기억한다. 매 타건마다 8개를 전부 훑지 않아도 된다.
+    var away = 0;
     function goTo(f, x, y) {                  // 손가락 f 를 (x,y)로. 이동한 거리를 돌려준다.
       var dx = cx[f] - x, dy = cy[f] - y;
       cx[f] = x; cy[f] = y;
+      if (x === g.homeX[f] && y === g.homeY[f]) away &= ~(1 << f);
+      else away |= (1 << f);
       return Math.sqrt(dx * dx + dy * dy);
     }
     function homeExcept(a, b) {               // kla: 이번에 안 쓰는 손가락을 홈으로
-      for (var q = 0; q < 8; q++) {
-        if (q === a || q === b) continue;
-        if (cx[q] !== g.homeX[q] || cy[q] !== g.homeY[q]) dist += goTo(q, g.homeX[q], g.homeY[q]);
+      var m = away & ~((a >= 0 ? 1 << a : 0) | (b >= 0 ? 1 << b : 0));
+      while (m) {
+        var q = 31 - Math.clz32(m & -m);
+        dist += goTo(q, g.homeX[q], g.homeY[q]);
+        m &= m - 1;
       }
     }
     function chain(f, baseId) {               // 바이그램 사슬에 한 타건을 넣는다
