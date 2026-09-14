@@ -20,7 +20,7 @@
       jungLead: null
     },
     s390: {
-      id: "s390", name: "세벌식 390", short: "390", note: "공병우 3-90",
+      id: "s390", name: "세벌식 390", short: "390", note: "한글문화원 3-90 (1990)",
       twoSet: false,
       cho:  "k hu yi; n jl o0'pm",
       jung: "fr6Rtce7v   4b   5g8d",
