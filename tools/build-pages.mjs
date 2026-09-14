@@ -589,7 +589,8 @@ console.log(`wrote privacy.html (광고 ${ADS_ON ? "켜짐 — 쿠키·제3자·
     "@context": "https://schema.org",
     "@graph": [
       { "@type": "WebApplication", name: "손가락 마일리지",
-        url: abs(""), applicationCategory: "UtilityApplication",
+        ...(SITE ? { url: SITE + "/" } : {}),          // 주소를 모르면 빈 url 을 넣지 않는다
+        applicationCategory: "UtilityApplication",
         operatingSystem: "Any", browserRequirements: "JavaScript",
         description: "한국어 텍스트를 두벌식·세벌식 자판의 실제 타건열로 전개해 손가락 이동거리를 계산하는 도구",
         inLanguage: "ko",
@@ -597,7 +598,12 @@ console.log(`wrote privacy.html (광고 ${ADS_ON ? "켜짐 — 쿠키·제3자·
       { "@type": "FAQPage",
         mainEntity: C.faq.map(([q, aTxt]) => ({
           "@type": "Question", name: q,
-          acceptedAnswer: { "@type": "Answer", text: aTxt.replace(/<[^>]+>/g, "") }
+          acceptedAnswer: {
+            "@type": "Answer",
+            // 태그를 지울 때 문단이 붙어 버리지 않게 <br>·</p> 자리는 공백으로 남긴다
+            text: aTxt.replace(/<br\s*\/?>|<\/p>/gi, " ").replace(/<[^>]+>/g, "")
+              .replace(/\s+/g, " ").trim()
+          }
         })) }
     ]
   };
