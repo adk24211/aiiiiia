@@ -19,11 +19,12 @@
     { keys: "zxcvbnm,./",      xoff: 2.25 }
   ];
 
-  var FINGERS = ["LP", "LR", "LM", "LI", "RI", "RM", "RR", "RP"];
+  var FINGERS = ["LP", "LR", "LM", "LI", "RI", "RM", "RR", "RP", "TH"];
   var FINGER_KO = ["왼손 새끼", "왼손 약지", "왼손 중지", "왼손 검지",
-                   "오른손 검지", "오른손 중지", "오른손 약지", "오른손 새끼"];
+                   "오른손 검지", "오른손 중지", "오른손 약지", "오른손 새끼",
+                   "엄지 (스페이스)"];
   var FINGER_KEYS = ["`1qaz", "2wsx", "3edc", "45rtfgvb",
-                     "67yuhjnm", "8ik,", "9ol.", "0-=p[]\;'/"];
+                     "67yuhjnm", "8ik,", "9ol.", "0-=p[]\\;'/"];
   var HOME_KEYS = "asdfjkl;";            // 손가락 인덱스 순서와 동일
 
   var SHIFT_PAIRS = [
@@ -43,32 +44,13 @@
     g.finger.fill(-1); g.row.fill(-1); g.shiftBase.fill(-1);
 
     var i, j, c;
-    if (kind === "mobile") {
-      // 스마트폰 세로 쿼티: 균일 10열 격자, 좌 5열 왼엄지 / 우 5열 오른엄지.
-      var MROWS = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
-      var moff = [0, 0.5, 1.5];
-      for (i = 0; i < MROWS.length; i++) {
-        for (j = 0; j < MROWS[i].length; j++) {
-          c = MROWS[i].charCodeAt(j);
-          g.x[c] = moff[i] + j + 0.5; g.y[c] = i + 0.5;
-          g.finger[c] = (moff[i] + j) < 5 ? 3 : 4;   // 왼엄지=LI 슬롯, 오른엄지=RI 슬롯
-          g.row[c] = i + 1;
-        }
-      }
-      // 숫자·기호는 별도 레이어(한 번 더 탭). 자리는 첫 줄 위 가상 행으로 둔다.
-      var MNUM = "1234567890";
-      for (j = 0; j < 10; j++) { c = MNUM.charCodeAt(j); g.x[c] = j + 0.5; g.y[c] = -0.5; g.finger[c] = j < 5 ? 3 : 4; g.row[c] = 0; }
-      var MSYM = "-=[]\;',./`";
-      for (j = 0; j < MSYM.length; j++) { c = MSYM.charCodeAt(j); if (g.finger[c] === -1) { g.x[c] = 9.5; g.y[c] = 3.5; g.finger[c] = 4; g.row[c] = 3; } }
-      g.homeX[3] = 2.5; g.homeY[3] = 1.5; g.homeX[4] = 7.5; g.homeY[4] = 1.5;
-      for (i = 0; i < 8; i++) if (i !== 3 && i !== 4) { g.homeX[i] = i < 4 ? 2.5 : 7.5; g.homeY[i] = 1.5; }
-      g.shiftX[0] = 0.5; g.shiftY[0] = 3.5; g.shiftX[1] = 9.5; g.shiftY[1] = 3.5;
-    } else {
+    {
       for (i = 0; i < ANSI_ROWS.length; i++) {
         var r = ANSI_ROWS[i];
         for (j = 0; j < r.keys.length; j++) {
           c = r.keys.charCodeAt(j);
-          g.x[c] = r.xoff + j + 0.5;
+          // 윗줄 맨 끝 백슬래시만 폭이 1.5u 라서 중심이 반 칸 오른쪽이다
+          g.x[c] = r.xoff + j + (c === 92 ? 0.75 : 0.5);
           g.y[c] = i + 0.5;
           g.row[c] = i;
         }
@@ -91,11 +73,11 @@
     return g;
   }
 
-  var GEOM = { ansi: buildGeometry("ansi"), mobile: buildGeometry("mobile") };
+  var GEOM = { ansi: buildGeometry("ansi") };
 
   /* ------------------------------------------------- 자모 -> 키열 사전화 */
 
-  var SPACE = -1, UNMAPPED = -2;
+  var SPACE = -1;
   var T_CHO = 0, T_JUNG = 100, T_JONG = 200;   // 토큰 = 종류 오프셋 + 인덱스
 
   function combOf(s, i) {
@@ -104,10 +86,13 @@
   }
 
   /* 한 자모를 치는 키 문자열. lead=true면 겹모음의 앞 자모(세벌식 오른손 자리). */
+  var COMPOUND_JUNG = [9, 10, 11, 14, 15, 16];   // ㅘ ㅙ ㅚ ㅝ ㅞ ㅟ
+  var useLead = true;                            // 세벌식 겹모음 타법 (§ setLeadStyle)
+
   function keysFor(L, kind, idx, lead, depth) {
     if (depth > 4) return "?";
     var direct;
-    if (kind === "jung" && lead && L.jungLead && L.jungLead[idx]) return L.jungLead[idx];
+    if (kind === "jung" && lead && useLead && L.jungLead && L.jungLead[idx]) return L.jungLead[idx];
     direct = L[kind].charAt(idx);
     if (direct && direct !== " ") return direct;
 
@@ -124,7 +109,10 @@
     var table = kind === "cho" ? D.COMB_CHO : kind === "jung" ? D.COMB_JUNG : D.COMB_JONG;
     var c = combOf(table, idx);
     if (c) {
-      var a = keysFor(L, kind, c[0], true, depth + 1);
+      // 겹모음(ㅘㅙㅚ ㅝㅞㅟ)의 앞 자모일 때만 세벌식 오른손 자리를 쓴다.
+      // ㅢ(=ㅡ+ㅣ)에는 적용하지 않는다.
+      var isCompoundVowel = kind === "jung" && COMPOUND_JUNG.indexOf(idx) >= 0;
+      var a = keysFor(L, kind, c[0], isCompoundVowel && useLead, depth + 1);
       var b = keysFor(L, kind, c[1], false, depth + 1);
       if (a !== "?" && b !== "?") return a + b;
     }
@@ -146,7 +134,7 @@
 
   /* ------------------------------------------------------ 텍스트 -> 자모 */
 
-  var S_BASE = 0xAC00, S_LAST = 0xD7A3, N_COUNT = 588, T_COUNT = 28, V_COUNT = 21;
+  var S_BASE = 0xAC00, S_LAST = 0xD7A3, N_COUNT = 588, T_COUNT = 28;
 
   function decompose(text) {
     text = String(text).normalize("NFC");
@@ -159,8 +147,19 @@
       buf[len++] = v;
     }
 
+    var orphanJamo = false;      // 지원하지 않는 첫가끝 자모가 나오면 뒤따르는 자모도 함께 버린다
     for (var i = 0; i < n; i++) {
       var cp = text.charCodeAt(i);
+      if (cp >= 0xD800 && cp <= 0xDBFF && i + 1 < n) {      // 서러게이트 쌍은 한 글자로 센다
+        var lo = text.charCodeAt(i + 1);
+        if (lo >= 0xDC00 && lo <= 0xDFFF) { i++; skipped++; orphanJamo = false; continue; }
+      }
+      if (cp >= 0x1100 && cp <= 0x11FF &&
+          !((cp >= 0x1100 && cp <= 0x1112) || (cp >= 0x1161 && cp <= 0x1175) || (cp >= 0x11A8 && cp <= 0x11C2))) {
+        skipped++; orphanJamo = true; continue;             // 옛한글 자모
+      }
+      if (orphanJamo && cp >= 0x1100 && cp <= 0x11FF) { skipped++; continue; }
+      orphanJamo = false;
       if (cp >= S_BASE && cp <= S_LAST) {                       // 완성형 음절
         var s = cp - S_BASE;
         push(T_CHO + ((s / N_COUNT) | 0));
@@ -200,14 +199,14 @@
    */
   function measure(compiled, dec, opt) {
     opt = opt || {};
-    var g = GEOM[opt.geometry === "mobile" ? "mobile" : "ansi"];
+    var g = GEOM.ansi;
     var unit = typeof opt.unit === "number" && opt.unit > 0 ? opt.unit : U_DEFAULT;
     var model = opt.model === "home" ? "home" : opt.model === "keep" ? "keep" : "kla";
 
     var cx = new Float64Array(8), cy = new Float64Array(8);
     for (var i = 0; i < 8; i++) { cx[i] = g.homeX[i]; cy[i] = g.homeY[i]; }
 
-    var keyCount = new Int32Array(128), fingerLoad = new Int32Array(8), rowCount = new Int32Array(5);
+    var keyCount = new Int32Array(128), fingerLoad = new Int32Array(9), rowCount = new Int32Array(5);
     var dist = 0, keyStrokes = 0, spaces = 0, shifts = 0, unmapped = 0, shiftL = 0, shiftR = 0;
     var bigrams = 0, sfb = 0, alt = 0, repeats = 0, homeHits = 0;
     var prevFinger = -1, prevBase = -1;
@@ -243,7 +242,8 @@
         // 스페이스는 엄지가 친다 — 이동거리 0. kla에서는 이때 나머지 손가락이 홈으로 돌아온다.
         if (model === "kla") homeExcept(-1, -1);
         heldShift = -1;
-        spaces++; prevFinger = -1; prevBase = -1;
+        spaces++; fingerLoad[8]++;          // 엄지도 타건이다
+        prevFinger = -1; prevBase = -1;
         continue;
       }
       var keys = v >= T_JONG ? jong[v - T_JONG] : v >= T_JUNG ? jung[v - T_JUNG] : cho[v];
@@ -295,7 +295,8 @@
     var d1 = Math.max(1, bigrams), d2 = Math.max(1, keyStrokes);
     var left = 0; for (i = 0; i < 4; i++) left += fingerLoad[i];
     var right = 0; for (i = 4; i < 8; i++) right += fingerLoad[i];
-    var loadTotal = Math.max(1, left + right);
+    var handTotal = Math.max(1, left + right);            // 좌우 비율은 여덟 손가락 기준
+    var loadTotal = Math.max(1, left + right + fingerLoad[8]);   // 부담 비율은 엄지 포함
 
     var keys10 = [];
     for (i = 0; i < 128; i++) if (keyCount[i]) keys10.push({ key: String.fromCharCode(i), n: keyCount[i] });
@@ -303,7 +304,7 @@
 
     return {
       layout: compiled.layout,
-      model: model, unit: unit, geometry: g.kind,
+      model: model, unit: unit,
       mm: dist * unit,
       units: dist,
       keyStrokes: keyStrokes, spaces: spaces, shifts: shifts,
@@ -320,7 +321,7 @@
       rowPct: [0, 1, 2, 3].map(function (r) { return 100 * rowCount[r + 1] / d2; }),
       fingerLoad: Array.prototype.slice.call(fingerLoad),
       fingerPct: Array.prototype.slice.call(fingerLoad).map(function (v) { return 100 * v / loadTotal; }),
-      leftPct: 100 * left / loadTotal, rightPct: 100 * right / loadTotal,
+      leftPct: 100 * left / handTotal, rightPct: 100 * right / handTotal,
       keyCount: keyCount, topKeys: keys10.slice(0, 10),
       mmPerSyllable: dec.syllables ? dist * unit / dec.syllables : 0
     };
@@ -329,15 +330,24 @@
   /* -------------------------------------------------------------- 공개 */
 
   var compiledCache = {};
+  /* 세벌식에서 겹모음의 앞 ㅗ·ㅜ 를 오른손 자리(/·9)로 칠지 여부.
+     이 가정은 SFB 수치를 크게 바꾸므로 화면에서 고를 수 있게 해 두었다. */
+  function setLeadStyle(on) {
+    on = on !== false;
+    if (on !== useLead) { useLead = on; compiledCache = {}; }
+    return useLead;
+  }
   function compiledFor(L) {
-    if (L.id && compiledCache[L.id] && compiledCache[L.id].layout === L) return compiledCache[L.id];
+    var key = L.id ? L.id + (useLead ? "|L" : "|N") : null;
+    if (key && compiledCache[key] && compiledCache[key].layout === L) return compiledCache[key];
     var c = compile(L);
-    if (L.id) compiledCache[L.id] = c;
+    if (key) compiledCache[key] = c;
     return c;
   }
 
   function analyze(text, opt) {
     opt = opt || {};
+    setLeadStyle(opt.leadStyle !== false);
     var layouts = opt.layouts || D.ORDER.map(function (id) { return D.LAYOUTS[id]; });
     var dec = decompose(text);
     var results = layouts.map(function (L) { return measure(compiledFor(L), dec, opt); });
@@ -346,8 +356,8 @@
       results: results,
       // 실제로 계산에 쓰인 값 (요청값이 아니라). 화면 라벨과 계산이 어긋나지 않게 한다.
       options: results.length
-        ? { unit: results[0].unit, model: results[0].model, geometry: results[0].geometry }
-        : { unit: U_DEFAULT, model: "kla", geometry: "ansi" }
+        ? { unit: results[0].unit, model: results[0].model, leadStyle: useLead }
+        : { unit: U_DEFAULT, model: "kla", leadStyle: useLead }
     };
   }
 
@@ -369,7 +379,7 @@
   root.KM_ENGINE = {
     SHIFT_OF: SHIFT_OF,
     analyze: analyze, decompose: decompose, measure: measure,
-    compile: compile, compiledFor: compiledFor, strokeString: strokeString,
+    compile: compile, compiledFor: compiledFor, strokeString: strokeString, setLeadStyle: setLeadStyle,
     keysFor: keysFor, buildGeometry: buildGeometry,
     GEOM: GEOM, FINGERS: FINGERS, FINGER_KO: FINGER_KO, HOME_KEYS: HOME_KEYS,
     ANSI_ROWS: ANSI_ROWS, U_DEFAULT: U_DEFAULT,

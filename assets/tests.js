@@ -89,7 +89,7 @@
 
     // 이상한 입력에서도 유한한 값이 나와야 한다
     var weird = ["", " ", "\n\n", "😀🙃", "漢字", "ＡＢＣ", "\u3164", "\u111b\u1161",
-                 "ㄱ", "ㅢ", "ㅘ", "가".repeat(5000)];
+                 "ㄱ", "ㅢ", "ㅘ", "ㄳ", "\\", "가".repeat(5000)];
     var bad = weird.filter(function (t) {
       return E.analyze(t).results.some(function (r) {
         return !isFinite(r.mm) || r.mm < 0 || !isFinite(r.sfbPct) || !isFinite(r.altPct) || !isFinite(r.homePct);
@@ -97,9 +97,28 @@
     });
     inv("이상 입력 12종 · NaN/무한/음수 없음", 0, bad.length);
 
-    // 대안 기하·모델도 죽지 않는다
-    var mob = E.analyze(DEMO, { geometry: "mobile" }).results[0];
-    inv("스마트폰 기하 · 유한한 거리", "true", String(isFinite(mob.mm) && mob.mm > 0));
+    // 세벌식 겹모음 타법 토글이 실제로 키열을 바꾸는가
+    inv("겹모음 앞자리 · 오른손 자리", "k/f", E.strokeString(L("sfinal"), "과"));
+    E.setLeadStyle(false);
+    inv("겹모음 앞자리 · 항상 왼손 자리", "kvf", E.strokeString(L("sfinal"), "과"));
+    E.setLeadStyle(true);
+    inv("토글을 되돌리면 원래대로", "k/f", E.strokeString(L("sfinal"), "과"));
+    // ㅢ(=ㅡ+ㅣ)는 겹모음 자리 규칙을 타지 않는다
+    inv("ㅢ 는 겹모음 자리 규칙 밖", "h8w", E.strokeString(L("sfinal"), "늴"));
+
+    // 백슬래시 글쇠가 손가락에 배정되어 있는가 (이스케이프 사고 회귀 방지)
+    inv("백슬래시 = 오른손 새끼", 7, E.GEOM.ansi.finger[92]);
+    inv("백슬래시 중심 = 14.25u (폭 1.5u)", 14.25, E.GEOM.ansi.x[92]);
+
+    // 스페이스도 엄지 타건으로 집계된다
+    var sp = one("dubeol", "가 나 다");
+    inv("엄지 부담이 0이 아니다", "true", String(sp.fingerPct[8] > 0));
+    inv("좌우 합계 100 (엄지 제외)", 100, Math.round(sp.leftPct + sp.rightPct));
+
+    // 이모지는 한 글자로 센다
+    inv("서러게이트 쌍 · 제외 3자", 3, E.analyze("😀😀😀").text.skipped);
+    // 옛한글은 뒤따르는 모음까지 함께 버린다 (유령 통계 방지)
+    inv("옛한글 자모열 · 전부 제외", 2, E.analyze("\u111b\u1161").text.skipped);
 
     var half = E.analyze(DEMO, { unit: 9.525 }).results[0].mm;
     inv("키 간격 절반 → 거리 절반", (4461.8 / 2).toFixed(1), half.toFixed(1));
@@ -125,10 +144,8 @@
     inv("시프트가 만드는 같은 손가락 연속을 잡는다", "true", String(one("dubeol", "ㅔㅃ").sfb === 1));
 
     // analyze()가 돌려주는 옵션은 실제로 쓴 값이어야 한다
-    inv("잘못된 옵션은 기본값으로 보고", "19.05|kla|ansi",
-        [E.analyze("가", { unit: -5, model: "HOME", geometry: "MOBILE" }).options.unit,
-         E.analyze("가", { unit: -5, model: "HOME", geometry: "MOBILE" }).options.model,
-         E.analyze("가", { unit: -5, model: "HOME", geometry: "MOBILE" }).options.geometry].join("|"));
+    var badOpt = E.analyze("가", { unit: -5, model: "HOME" }).options;
+    inv("잘못된 옵션은 기본값으로 보고", "19.05|kla", badOpt.unit + "|" + badOpt.model);
 
     var pass = 0, fail = 0;
     rows.forEach(function (r) { if (r.ok) pass++; else fail++; });

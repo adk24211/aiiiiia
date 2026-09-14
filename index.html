@@ -99,7 +99,7 @@
      "name": "세벌식에서 ㅗ와 ㅜ가 두 자리에 있던데요?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "맞습니다. 홑모음 ㅗ·ㅜ는 왼손 v·b 자리에서 치고, 겹모음(ㅘ ㅙ ㅚ ㅝ ㅞ ㅟ)의 앞자리로 쓸 때는 오른손 / ·9 자리를 씁니다. 그래야 뒤따르는 모음과 손이 갈립니다. 이 도구는 그 관행을 그대로 따라 계산합니다."
+      "text": "맞습니다. 자판표에는 ㅗ가 v와 / 두 곳에, ㅜ가 b와 9 두 곳에 있습니다. 홑모음일 때는 왼손 v·b, 겹모음(ㅘ ㅙ ㅚ ㅝ ㅞ ㅟ)의 앞자리일 때는 오른손 /·9를 쓰는 것이 권장되는 타법입니다. 그래야 뒤따르는 모음과 손이 갈리기 때문입니다.이 가정은 수치에 크게 영향을 줍니다. 오른손 자리를 쓰면 세벌식의 같은 손가락 연속이 크게 떨어집니다. 어느 쪽 가정을 쓸지 ‘계산 조건 바꾸기’에서 직접 고를 수 있게 해 두었으니, 두 값을 모두 보고 판단하세요."
      }
     },
     {
@@ -289,7 +289,8 @@
   <section id="tuning">
     <div class="wrap">
       <h2>계산 조건 바꾸기</h2>
-      <p class="small">기본값은 데스크톱 기계식 키보드에서 열 손가락으로 치는 상황입니다.</p>
+      <p class="small">기본값은 데스크톱 기계식 키보드에서 열 손가락으로 치는 상황입니다.
+        바꾸면 결과가 즉시 다시 계산됩니다.</p>
       <div class="settings">
         <fieldset>
           <legend>이동거리 모델</legend>
@@ -313,11 +314,14 @@
           </div>
         </fieldset>
         <fieldset>
-          <legend>자판 형태</legend>
+          <legend>세벌식 겹모음 타법</legend>
           <div class="radio-row">
-            <label><input type="radio" name="geom" value="ansi" checked> <span>일반 키보드 (열 손가락)</span></label>
-            <label><input type="radio" name="geom" value="mobile">
-              <span>스마트폰 두 엄지 <span class="tiny">— 8㎜ 격자, 세벌식은 가정 계산입니다</span></span></label>
+            <label><input type="radio" name="lead" value="on" checked>
+              <span>오른손 자리 사용 <span class="tiny">— ㅘ ㅙ ㅚ ㅝ ㅞ ㅟ 를 칠 때 앞의 ㅗ·ㅜ 는
+                오른손 <span class="mono">/</span>·<span class="mono">9</span> 로. 세벌식 사용자들이 권하는 타법</span></span></label>
+            <label><input type="radio" name="lead" value="off">
+              <span>항상 왼손 자리 <span class="tiny">— ㅗ·ㅜ 를 언제나 <span class="mono">v</span>·<span class="mono">b</span> 로.
+                같은 손가락 연속이 크게 늘어납니다</span></span></label>
           </div>
         </fieldset>
       </div>

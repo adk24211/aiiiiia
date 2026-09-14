@@ -12,7 +12,7 @@
     source: "demo",              // demo | typed | kakao
     kakao: null,
     kakaoLabel: "",
-    opts: { model: "kla", unit: 19.05, geometry: "ansi" },
+    opts: { model: "kla", unit: 19.05, leadStyle: true },
     custom: null,                // { baseId, swaps: [[a,b], ...] }
     last: null
   };
@@ -136,7 +136,7 @@
     }
     S.last = E.analyze(S.text, {
       layouts: layoutList(), model: S.opts.model,
-      unit: S.opts.unit, geometry: S.opts.geometry
+      unit: S.opts.unit, leadStyle: S.opts.leadStyle
     });
     return S.last;
   }
@@ -379,7 +379,8 @@
       }).join("") + "</div>";
 
     $("#fingerBlock").innerHTML =
-      '<div class="table-scroll"><table><caption>손가락 8개가 나눠 가진 타건 비율 (시프트 포함)</caption>' +
+      '<div class="table-scroll"><table><caption>손가락이 나눠 가진 타건 비율 (시프트와 스페이스 포함). ' +
+      '좌우 합계는 엄지를 뺀 여덟 손가락 기준입니다.</caption>' +
       "<thead><tr>" + head + "</tr></thead><tbody>" + body + "</tbody></table></div>" + bars;
   }
 

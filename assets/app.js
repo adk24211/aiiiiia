@@ -158,7 +158,7 @@
     var t = e.target;
     if (t.name === "model") S.opts.model = t.value;
     else if (t.name === "pitch") S.opts.unit = parseFloat(t.value);
-    else if (t.name === "geom") S.opts.geometry = t.value;
+    else if (t.name === "lead") S.opts.leadStyle = t.value === "on";
     else return;
     busy();
     A.renderSoon(20);
@@ -283,7 +283,7 @@
     for (var i = 0; i < keys.length; i++)
       for (var j = i + 1; j < keys.length; j++) pairs.push([keys[i], keys[j]]);
 
-    var opt = { model: S.opts.model, unit: S.opts.unit, geometry: S.opts.geometry };
+    var opt = { model: S.opts.model, unit: S.opts.unit, leadStyle: S.opts.leadStyle };
     var baseMM = E.measure(E.compile(L), dec, opt).mm;
     var out = $("#autoOut");
     out.innerHTML = '<p class="small" id="optProg" role="status">' + nf(pairs.length) +
