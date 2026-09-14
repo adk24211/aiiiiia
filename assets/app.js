@@ -10,17 +10,22 @@
 
   /* ------------------------------------------------------------ 테마 */
 
+  function prefersDark() {
+    try { return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches); }
+    catch (e) { return false; }
+  }
+
   function applyTheme(t) {
     if (t) document.documentElement.setAttribute("data-theme", t);
     else document.documentElement.removeAttribute("data-theme");
-    var dark = t === "dark" || (!t && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    var dark = t === "dark" || (!t && prefersDark());
     var btn = $("#themeToggle");
     btn.setAttribute("aria-pressed", dark ? "true" : "false");
     $("#themeLabel").textContent = dark ? "밝은 화면" : "어두운 화면";
   }
   $("#themeToggle").addEventListener("click", function () {
     var cur = document.documentElement.getAttribute("data-theme");
-    var dark = cur ? cur === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var dark = cur ? cur === "dark" : prefersDark();
     var next = dark ? "light" : "dark";
     store("km.theme", next);
     applyTheme(next);
@@ -580,9 +585,18 @@
 
   var saved = store("km.theme");
   applyTheme(saved === "dark" || saved === "light" ? saved : null);
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", function () {
-    if (!document.documentElement.getAttribute("data-theme")) A.render();
-  });
+  // 사파리 14 미만은 MediaQueryList 에 addEventListener 가 없다. 여기서 던지면 앱이 안 뜬다.
+  (function () {
+    var mq = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)");
+    if (!mq) return;
+    var onChange = function () {
+      if (!document.documentElement.getAttribute("data-theme")) A.render();
+    };
+    try {
+      if (mq.addEventListener) mq.addEventListener("change", onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    } catch (e) { /* 테마 자동 전환만 안 될 뿐, 도구는 동작한다 */ }
+  })();
 
   function readHashInit() {
     if (!readHash()) src.value = S.text;    // 빈 상태 금지 — 무엇을 재고 있는지 바로 보이게
