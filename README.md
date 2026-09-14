@@ -58,7 +58,8 @@ index.html              도구 본체
 dubeolsik.html          자판별 소개 + 전체 배열표 (tools/build-pages.mjs 가 생성)
 sebeolsik-390.html
 sebeolsik-final.html
-privacy.html
+about.html              소개와 문의 (생성)
+privacy.html            개인정보처리방침 (생성 — 광고 설정에 따라 조항이 달라짐)
 test.html               브라우저에서 도는 골든 벡터 자가 검증
 assets/
   layouts.js   자판 데이터 (생성물 — 직접 고치지 말 것)
@@ -121,10 +122,36 @@ GitHub Pages. `.github/workflows/pages.yml` 이 푸시할 때마다
 
 ### 도메인을 산 뒤에 되는 것
 
-`adsenseClient` — **`*.github.io` 로는 애드센스 승인이 나지 않습니다.** 부모 도메인 소유 확인을
-할 수 없기 때문입니다. 커스텀 도메인을 붙이고(`CNAME` 파일 + DNS), `ads.txt` 를 루트에 올린 뒤
-신청하세요. 승인에는 개인정보처리방침 페이지가 필요한데 `privacy.html` 로 이미 있습니다.
-`siteUrl` 도 같이 채우면 공유 카드와 sitemap에 반영됩니다.
+`adsenseClient` + `adsenseSlotTop` / `adsenseSlotBottom` — **`*.github.io` 로는 애드센스 승인이
+나지 않습니다.** 부모 도메인(`github.io`)의 소유를 확인할 수 없고, `ads.txt` 도 루트에 올릴 수
+없기 때문입니다. 커스텀 도메인을 붙이고(`CNAME` 파일 + DNS), `ads.txt` 의 주석을 풀어 본인
+pub 번호를 넣은 뒤 신청하세요.
+
+승인 심사가 보는 것들은 이미 갖춰져 있습니다:
+
+- 개인정보처리방침 → `privacy.html` (모든 페이지 푸터에서 링크)
+- 소개 / 문의 → `about.html` (`contactEmail` 을 채우면 이메일이, 비우면 GitHub 이슈가 표시됨)
+- 충분한 콘텐츠 → 자판 소개 페이지 3종
+
+`siteUrl` 도 같이 채우면 canonical·og:image가 절대 주소가 되고 `sitemap.xml` 이 생성됩니다.
+
+### 개인정보처리방침은 설정에 따라 바뀝니다
+
+`tools/build-pages.mjs` 가 `config.js` 를 읽어서 방침을 생성합니다.
+
+- 광고를 **끈 상태**: 수집하는 것이 GitHub 접속 로그뿐이므로 방침도 그만큼만 (11개 조).
+- `adsenseClient` 또는 `coupangPartnerId` 를 **켠 상태**: 쿠키, 제3자 제공, 국외 이전,
+  맞춤형 광고 거부 방법 조항이 자동으로 들어갑니다 (개인정보 보호법 제30조 기재사항).
+
+광고를 켰는데 `contactEmail` 이 비어 있으면 빌드가 경고합니다 — 보호책임자 연락처는
+법정 기재사항입니다.
+
+### 대가성 문구
+
+`coupangPartnerId` 를 채우면 문구가 **페이지 첫 부분과 추천 블록 바로 위** 두 곳에 켜집니다.
+공정거래위원회 「추천·보증 등에 관한 표시·광고 심사지침」은 본문과 명확히 구분되고 쉽게
+인식되는 표시를 요구하므로, 본문보다 **큰 글씨 · 다른 색 · 테두리**로 넣었고 접히지 않습니다.
+푸터에만 넣는 배치는 피했습니다. 제휴 링크에는 `rel="sponsored nofollow"` 가 붙습니다.
 
 ### 유료 언락에 대한 솔직한 말
 

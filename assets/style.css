@@ -155,11 +155,16 @@ a:hover { text-decoration-thickness: 2px; }
 .hero h1 { max-width: 18ch; }
 .hero h1 em { font-style: normal; color: var(--accent); }
 
-.disclosure {
-  margin: 1rem 0 0; padding: .55rem .8rem;
-  border: 1px dashed var(--line-2); border-radius: 8px;
-  font-size: .78rem; color: var(--ink-2); background: var(--surface);
+/* 대가성 고지. 공정위 심사지침은 '본문과 명확히 구분되고 쉽게 인식되는' 표시를 요구한다 —
+   본문보다 크게, 본문과 다른 색으로, 테두리로 구분해서, 제휴 링크보다 위에 둔다.
+   작게 만들거나 접어 두거나 푸터에만 두면 안 된다. */
+.ad-disclosure {
+  margin: 1.1rem 0; padding: .7rem .9rem;
+  border: 2px solid var(--accent); border-radius: 10px;
+  background: var(--accent-bg); color: var(--accent);
+  font-size: 1.02rem; font-weight: 650; line-height: 1.5;
 }
+.ad-disclosure b { font-weight: 800; }
 
 /* ---------------------------------------------------------------- 입력 */
 

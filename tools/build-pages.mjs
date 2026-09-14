@@ -68,7 +68,8 @@ function shell({ title, desc, canonical, body, extraHead = "" }) {
     <li><a href="dubeolsik.html">두벌식</a></li>
     <li><a href="sebeolsik-390.html">세벌식 390</a></li>
     <li><a href="sebeolsik-final.html">세벌식 최종</a></li>
-    <li><a href="privacy.html">개인정보처리방침</a></li>
+    <li><a href="about.html">소개</a></li>
+    <li><a href="privacy.html"><strong>개인정보처리방침</strong></a></li>
   </ul>
   <p class="tiny">자판 배열 데이터는 <a href="https://github.com/libhangul/libhangul" rel="noopener">libhangul</a>
     원본에서 기계 추출했습니다 · 코드 MIT</p>
@@ -186,7 +187,7 @@ const METRIC_ROWS = [
   ["좌우 손 비율", (r) => nf(r.leftPct, 0) + " : " + nf(r.rightPct, 0)]
 ];
 
-let urls = ["", ...Object.values(PAGES).map((p) => p.file)];
+let urls = ["", ...Object.values(PAGES).map((p) => p.file), "about.html", "privacy.html"];
 
 for (const id of D.ORDER) {
   const L = D.LAYOUTS[id], meta = PAGES[id], r = byId[id];
@@ -238,60 +239,217 @@ for (const id of D.ORDER) {
   console.log("wrote", meta.file);
 }
 
-/* ------------------------------------------------------------- 개인정보 */
+/* ------------------------------------------------ 소개 · 개인정보처리방침 */
+
+const ADS_ON = !!(CFG.adsenseClient || CFG.coupangPartnerId);
+const ISSUES = (CFG.repoUrl || "").replace(/\/*$/, "") + "/issues";
+const contact = CFG.contactEmail
+  ? `<a href="mailto:${esc(CFG.contactEmail)}">${esc(CFG.contactEmail)}</a>`
+  : `<a href="${esc(ISSUES)}" rel="noopener">GitHub 이슈</a>`;
+const owner = CFG.ownerName ? esc(CFG.ownerName) : "본 사이트 운영자";
+const policyDate = CFG.policyDate ? esc(CFG.policyDate) : "사이트 공개일";
+
+if (ADS_ON && !CFG.contactEmail) {
+  console.warn("경고: 광고를 켰는데 assets/config.js 의 contactEmail 이 비어 있습니다.\n" +
+               "      개인정보 보호법 제30조는 보호책임자 연락처 기재를 요구하고,\n" +
+               "      애드센스 심사도 문의 수단을 확인합니다. 이메일을 채우세요.");
+}
+
+const about = `
+<section><div class="wrap" style="max-width:44rem">
+  <h1>이 도구에 대하여</h1>
+  <p class="lede">손가락 마일리지는 내가 쓴 한글을 두벌식·세벌식 자판의 실제 타건열로 펼쳐,
+    손가락이 움직인 거리를 재 주는 계산기입니다.</p>
+
+  <h2>왜 만들었나</h2>
+  <p>“세벌식이 더 편하다”는 이야기는 오래됐지만, 정작 <strong>얼마나</strong> 편한지를 숫자로
+    보여 주는 한국어 도구는 찾기 어려웠습니다. 영문 자판에는 배열 비교 분석기가 여럿 있는데,
+    그 도구들은 한 글자가 한 타건이라는 전제로 만들어져 있어 한 음절이 두세 번의 타건으로
+    풀리는 한글에는 쓸 수 없습니다.</p>
+  <p>그래서 한글 음절을 초성·중성·종성으로 풀고, 각 자모를 자판표에 따라 실제 키로 옮긴 다음,
+    손가락이 그 키들을 오가며 움직인 거리를 재는 계산기를 만들었습니다. 재 보니
+    <strong>통념과 반대되는 결과</strong>가 나왔습니다. 세벌식은 타건 수도 시프트도 적지만
+    이동거리는 오히려 깁니다. 자모를 숫자행까지 펼쳐 놓았기 때문입니다.</p>
+
+  <h2>어떻게 계산하나</h2>
+  <p>자판 배열 데이터는 <a href="https://github.com/libhangul/libhangul" rel="noopener">libhangul</a>
+    원본 소스에서 기계로 추출했습니다. 사람이 배열도를 보고 옮겨 적은 값은 하나도 없습니다.
+    배열도를 눈으로 베끼다 키 하나를 틀리면 이런 도구는 통째로 신뢰를 잃기 때문입니다.
+    자동 검증이 저장소에 붙어 있어, 코드를 고칠 때마다 원본과 대조합니다.</p>
+  <p>계산 과정과 이 도구가 하지 못하는 일은
+    <a href="./#method">계산 방법과 출처</a>에 전부 적어 두었습니다.
+    브라우저에서 직접 돌려 볼 수 있는 <a href="test.html">자가 검증 페이지</a>도 있습니다.</p>
+
+  <h2>개인정보</h2>
+  <p>이 사이트에는 서버가 없습니다. 붙여 넣은 글과 불러온 카카오톡 파일은 브라우저 안에서만
+    읽고 계산하며, 외부로 보내는 코드 자체가 들어 있지 않습니다. 자세한 내용은
+    <a href="privacy.html">개인정보처리방침</a>을 보세요.</p>
+
+  <h2>만든 사람과 문의</h2>
+  <p>${owner}가 만들었습니다. 자판 데이터의 오류 제보, 기능 제안, 그 밖의 문의는
+    ${contact}로 보내 주세요. 특히 <strong>배열이 틀렸다</strong>는 제보는 출처와 함께
+    주시면 가장 빨리 반영됩니다.</p>
+  <p class="small">소스 코드는 <a href="${esc(CFG.repoUrl || "")}" rel="noopener">공개되어 있습니다</a> (MIT).</p>
+</div></section>`;
+
+writeFileSync(join(ROOT, "about.html"), shell({
+  title: "소개 — 손가락 마일리지",
+  desc: "손가락 마일리지는 한글 자판의 손가락 이동거리를 재는 도구입니다. 왜 만들었고 어떻게 계산하는지 설명합니다.",
+  canonical: abs("about.html"),
+  body: about
+}));
+console.log("wrote about.html");
+
+/* 광고를 켜지 않으면 수집하는 개인정보가 GitHub 접속 로그뿐이므로 방침도 그만큼만 쓴다.
+   광고를 켜면 쿠키·제3자 제공·국외 이전 조항이 자동으로 들어간다. */
+const art = (n, title, body) => `<h2>제${n}조 (${title})</h2>${body}`;
+
 const privacy = `
 <section><div class="wrap" style="max-width:44rem">
   <h1>개인정보처리방침</h1>
-  <p class="lede">이 사이트는 이용자의 개인정보를 수집하지 않습니다. 아래는 그 사실을 구체적으로 확인해 드리는 문서입니다.</p>
+  <p class="lede">「손가락 마일리지」(이하 “본 사이트”)는 「개인정보 보호법」 제30조에 따라
+    다음과 같이 개인정보처리방침을 수립·공개합니다.</p>
+  ${ADS_ON ? "" : `<p class="privacy-note">이 사이트는 현재 <strong>광고와 분석 도구를 사용하지 않습니다.</strong>
+    그래서 수집되는 정보가 웹사이트 호스팅 과정의 접속 기록뿐이고, 이 방침도 그만큼만 짧습니다.</p>`}
 
-  <h2>1. 이 사이트의 구조</h2>
-  <p>손가락 마일리지는 서버가 없는 정적 웹사이트입니다. HTML·CSS·JavaScript 파일만 내려받아 이용자의
-     브라우저에서 실행되며, 계산을 처리하는 서버나 데이터베이스가 존재하지 않습니다.</p>
+  ${art(0, "가장 중요한 원칙 — 이용자가 넣은 내용", `
+    <p>본 사이트의 분석 기능은 전적으로 이용자의 웹브라우저 안에서만 동작합니다.
+      이용자가 입력하거나 불러온 텍스트·대화 기록·파일의 내용은 <strong>어떠한 경우에도
+      서버 또는 제3자에게 전송되지 않으며, 저장되지 않습니다.</strong>
+      본 사이트는 이용자의 입력 내용을 수집·보관할 수 있는 서버 및 데이터베이스를
+      보유하고 있지 않습니다. 브라우저 창을 닫으면 입력 내용은 소멸합니다.</p>
+    <p class="small">브라우저 개발자 도구의 네트워크 탭을 열어 둔 채 파일을 넣어 보시면
+      직접 확인하실 수 있습니다. 소스 코드도 전부 공개되어 있습니다.</p>`)}
 
-  <h2>2. 이용자가 입력한 글과 파일</h2>
-  <p>텍스트 입력란에 붙여 넣은 글과, 선택한 카카오톡 대화 파일은 <strong>브라우저 메모리 안에서만</strong>
-     읽고 계산합니다. 어떤 형태로도 외부로 전송하지 않으며, 전송하는 코드 자체가 포함되어 있지 않습니다.
-     페이지를 닫거나 새로고침하면 즉시 사라집니다.</p>
-  <p>이 점은 브라우저 개발자 도구의 네트워크 탭을 열어 두고 파일을 넣어 보시면 직접 확인할 수 있습니다.
-     소스 코드도 전부 공개되어 있습니다.</p>
+  ${art(1, "개인정보의 처리 목적", `<ol>
+    <li>웹사이트의 안정적 제공</li>
+    ${ADS_ON ? "<li>광고의 게재 및 광고 성과 측정</li><li>접속 통계 분석 및 서비스 개선</li>" : ""}
+  </ol>`)}
 
-  <h2>3. 브라우저에 저장되는 값</h2>
-  <p>이용자 편의를 위해 다음 값만 브라우저의 로컬 저장소(localStorage)에 남습니다. 이 값은 이용자의 기기를
-     떠나지 않으며, 브라우저 설정에서 언제든 삭제할 수 있습니다.</p>
-  <ul>
-    <li><span class="mono">km.theme</span> — 밝은 화면 / 어두운 화면 선택</li>
-    <li><span class="mono">km.unlock</span> — 고해상도 내려받기 잠금 해제 여부 (해당 기능을 이용한 경우에만)</li>
-  </ul>
-  <p>대화 파일의 내용이나 참여자 이름은 저장하지 않습니다. 주소창 링크에 담기지도 않습니다.</p>
+  ${art(2, "처리하는 개인정보의 항목", `
+    <p>본 사이트는 회원가입 절차가 없으며, 이름·이메일·연락처 등 개인정보를 직접 수집하지 않습니다.
+      다만 서비스 이용 과정에서 아래 정보가 자동으로 생성·수집될 수 있습니다.</p>
+    <ul>
+      <li><strong>웹사이트 호스팅 과정</strong>: 접속 IP 주소, 접속 일시, 브라우저·운영체제 종류
+        (수집 주체: GitHub, Inc. — 제${ADS_ON ? 5 : 4}조 참조)</li>
+      ${ADS_ON ? `<li><strong>광고 게재 과정</strong>: 쿠키, 광고 식별자, IP 주소, 접속 경로,
+        서비스 이용 기록 (수집 주체: 제5조의 사업자)</li>` : ""}
+    </ul>
+    <p>이용자가 분석을 위해 입력하거나 불러온 <strong>텍스트·대화 기록·파일의 내용은
+      수집 항목에 포함되지 않습니다</strong>(제0조).</p>`)}
 
-  <h2>4. 접속 기록</h2>
-  <p>이 사이트는 GitHub Pages를 통해 제공됩니다. 웹사이트 제공 과정에서 GitHub이 접속 로그(IP 주소 등)를
-     수집할 수 있으며, 이는 운영자가 접근하거나 통제할 수 없는 영역입니다. 자세한 내용은 GitHub의
-     개인정보처리방침을 참고해 주세요.</p>
+  ${art(3, "개인정보의 처리 및 보유 기간, 파기", `
+    <p>본 사이트는 개인정보를 저장하는 서버를 운영하지 않으므로 자동 수집 정보를 직접 보유하거나
+      파기할 대상이 없습니다. 제${ADS_ON ? 5 : 4}조의 사업자가 보유하는 정보의 기간은 각 사업자의
+      개인정보처리방침에 따릅니다.</p>
+    <p>이용자의 브라우저에 저장되는 값은 이용자가 직접 삭제하기 전까지 이용자의 기기에만
+      보관되며, 본 사이트는 이에 접근하거나 외부로 전송하지 않습니다.</p>`)}
 
-  <h2>5. 광고와 쿠키</h2>
-  <p id="adsNote">현재 이 사이트에는 광고가 게재되어 있지 않으며, 광고용 쿠키를 사용하지 않습니다.
-     추후 광고를 게재하게 되면 이 항목을 먼저 갱신하고, 광고 제공자가 사용하는 쿠키의 종류와
-     거부 방법을 함께 안내하겠습니다.</p>
+  ${art(ADS_ON ? 4 : 4, "브라우저에 저장되는 값과 그 거부 방법", `
+    <p>본 사이트가 이용자의 기기에 남기는 값은 다음뿐입니다. 어느 것도 기기를 떠나지 않습니다.</p>
+    <ul>
+      <li><code>km.theme</code> — 밝은 화면 / 어두운 화면 선택</li>
+      <li><code>km.unlock</code> — 고해상도 내려받기 잠금 해제 여부 (해당 기능을 이용한 경우에만)</li>
+    </ul>
+    <p>대화 파일의 내용이나 참여자 이름은 저장하지 않으며, 주소창 링크에도 담기지 않습니다.</p>
+    <p>브라우저 설정에서 사이트 데이터를 삭제하거나 저장을 거부할 수 있습니다. 거부하면
+      화면 설정이 기억되지 않을 뿐, 계산 기능은 그대로 동작합니다.</p>
+    ${ADS_ON ? `
+    <h3>광고 쿠키와 맞춤형 광고 거부</h3>
+    <p>제5조의 사업자가 광고 게재를 위해 쿠키를 설치할 수 있습니다. 이용자는 다음 방법으로
+      거부할 수 있습니다.</p>
+    <ul>
+      <li>브라우저 설정에서 쿠키 차단 (Chrome: 설정 → 개인 정보 보호 및 보안 → 서드 파티 쿠키 /
+        Safari: 설정 → 개인 정보 보호 / Firefox: 설정 → 개인 정보 및 보안)</li>
+      <li>Google 광고 설정에서 개인 맞춤 광고 끄기 —
+        <a href="https://adssettings.google.com/" rel="noopener">adssettings.google.com</a></li>
+      <li>참여 사업자 일괄 거부 —
+        <a href="https://www.youronlinechoices.com/kr/" rel="noopener">youronlinechoices.com/kr</a></li>
+      <li>브라우저의 시크릿 모드 이용</li>
+    </ul>` : ""}`)}
 
-  <h2>6. 만 14세 미만 이용자</h2>
-  <p>이 사이트는 어떤 개인정보도 수집하지 않으므로 연령에 따른 별도 처리 절차를 두고 있지 않습니다.</p>
+  ${ADS_ON ? art(5, "개인정보의 제3자 제공 및 국외 이전", `
+    <p>본 사이트는 아래 사업자의 서비스를 이용하며, 이 과정에서 제2조의 자동 수집 정보가
+      해당 사업자에게 전달되어 <strong>국외(미국)에서 처리될 수 있습니다.</strong></p>
+    <div class="table-scroll"><table>
+      <caption>제3자 제공 및 국외 이전 현황</caption>
+      <thead><tr><th scope="col">구분</th><th scope="col">이전받는 자 · 국가</th>
+        <th scope="col">항목 · 목적</th><th scope="col">보유 기간 · 방침</th></tr></thead>
+      <tbody>
+        ${CFG.adsenseClient ? `<tr><th scope="row">광고 게재</th><td>Google LLC · 미국</td>
+          <td>쿠키, 광고 식별자, IP 주소, 브라우저 정보, 접속 기록 / 광고 게재 및 성과 측정</td>
+          <td>Google 방침에 따름 · <a href="https://policies.google.com/privacy?hl=ko" rel="noopener">방침</a>,
+            <a href="https://policies.google.com/technologies/partner-sites?hl=ko" rel="noopener">파트너 사이트 데이터 사용</a></td></tr>` : ""}
+        ${CFG.coupangPartnerId ? `<tr><th scope="row">제휴 링크</th><td>쿠팡 주식회사 · 대한민국</td>
+          <td>링크 클릭 시 전달되는 접속 정보 / 제휴 성과 측정</td>
+          <td>쿠팡 방침에 따름</td></tr>` : ""}
+        <tr><th scope="row">웹사이트 호스팅</th><td>GitHub, Inc. · 미국</td>
+          <td>접속 IP 주소, 접속 일시, 브라우저 정보 / 정적 웹사이트 전송</td>
+          <td>GitHub 방침에 따름 ·
+            <a href="https://docs.github.com/ko/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">방침</a></td></tr>
+      </tbody></table></div>
+    <p>이용자는 위 국외 이전을 거부할 권리가 있으며, 거부를 원하는 경우 제4조의 방법으로
+      쿠키를 차단하거나 본 사이트 이용을 중단할 수 있습니다. 이전 시점은 이용자가 본 사이트에
+      접속하는 시점이며, 네트워크를 통해 전송됩니다.</p>`)
+    : art(4 + 1, "웹사이트 호스팅", `
+    <p>이 사이트는 GitHub Pages로 제공됩니다. 웹사이트를 전송하는 과정에서 GitHub, Inc.(미국)이
+      접속 로그(IP 주소, 접속 일시, 브라우저 정보)를 수집할 수 있으며, 이는 본 사이트가 접근하거나
+      통제할 수 없는 영역입니다.
+      <a href="https://docs.github.com/ko/site-policy/privacy-policies/github-general-privacy-statement" rel="noopener">GitHub 개인정보처리방침</a></p>
+    <p>본 사이트는 광고·분석 도구를 사용하지 않으므로 그 밖의 제3자 제공은 없습니다.</p>`)}
 
-  <h2>7. 문의</h2>
-  <p>이 방침에 대한 문의나 정정 요청은 <a href="https://github.com/adk24211/aiiiiia/issues" rel="noopener">GitHub 이슈</a>로
-     남겨 주세요.</p>
+  ${art(6, "정보주체의 권리와 행사 방법", `
+    <p>이용자는 언제든지 개인정보의 열람·정정·삭제·처리정지를 요구할 수 있습니다.
+      다만 본 사이트는 이용자를 식별할 수 있는 정보를 직접 보유하지 않으므로 개별 이용자에 대한
+      열람·정정에 응하지 못할 수 있으며, 이 경우 그 사유를 알려 드립니다.</p>
+    <p>제${ADS_ON ? 5 : 5}조의 사업자가 처리하는 정보에 대해서는 해당 사업자에게 직접 권리를 행사하실 수 있습니다.
+      Google에 대해서는 <a href="https://myaccount.google.com/" rel="noopener">내 Google 계정</a>에서
+      데이터 관리·삭제가 가능합니다.</p>
+    <p>권리 행사는 제8조의 연락처로 하실 수 있습니다.</p>`)}
 
-  <p class="small" id="privacyDate">이 방침은 사이트 공개일부터 적용됩니다. 내용이 바뀌면 이 페이지에서 알립니다.</p>
+  ${art(7, "개인정보의 안전성 확보 조치", `<ol>
+    <li>개인정보를 수집·저장하는 서버 및 데이터베이스를 운영하지 않음 (수집 최소화)</li>
+    <li>이용자의 입력 내용을 네트워크로 전송하지 않는 클라이언트 사이드 전용 설계</li>
+    <li>HTTPS(TLS)를 통한 전 구간 암호화 전송</li>
+    <li>개인정보 취급자의 최소화</li>
+  </ol>`)}
+
+  ${art(8, "개인정보 보호책임자 및 열람청구 접수", `
+    <p>개인정보 처리에 관한 업무를 총괄하고 정보주체의 불만 처리 및 피해 구제를 담당합니다.</p>
+    <ul>
+      <li>책임자: ${owner}</li>
+      <li>연락처: ${contact}</li>
+    </ul>`)}
+
+  ${art(9, "만 14세 미만 아동의 개인정보", `
+    <p>본 사이트는 만 14세 미만 아동의 개인정보를 수집하지 않으며, 회원가입 등 개인정보를
+      직접 입력받는 절차를 두고 있지 않습니다.</p>`)}
+
+  ${art(10, "권익침해 구제 방법", `
+    <p>개인정보 침해로 인한 구제를 받기 위하여 아래 기관에 분쟁 해결이나 상담을 신청하실 수 있습니다.</p>
+    <ul>
+      <li>개인정보 침해신고센터 (한국인터넷진흥원) · 국번없이 118 ·
+        <a href="https://privacy.kisa.or.kr" rel="noopener">privacy.kisa.or.kr</a></li>
+      <li>개인정보 분쟁조정위원회 · 1833-6972 ·
+        <a href="https://www.kopico.go.kr" rel="noopener">kopico.go.kr</a></li>
+      <li>대검찰청 사이버수사과 · 국번없이 1301</li>
+      <li>경찰청 사이버수사국 · 국번없이 182 ·
+        <a href="https://ecrm.police.go.kr" rel="noopener">ecrm.police.go.kr</a></li>
+    </ul>`)}
+
+  ${art(11, "방침의 변경", `
+    <p>이 개인정보처리방침은 ${policyDate}부터 적용됩니다. 법령·정책 또는 보안기술의 변경에 따라
+      내용의 추가·삭제 및 수정이 있을 경우에는 시행 7일 전부터 이 페이지를 통해 변경 이유와
+      내용을 알려 드리겠습니다.</p>`)}
 </div></section>`;
 
 writeFileSync(join(ROOT, "privacy.html"), shell({
   title: "개인정보처리방침 — 손가락 마일리지",
   desc: "손가락 마일리지는 서버가 없는 정적 사이트로, 이용자가 넣은 글과 파일을 외부로 전송하지 않습니다.",
   canonical: abs("privacy.html"),
-  body: privacy,
-  extraHead: '\n<meta name="robots" content="index,follow">'
+  body: privacy
 }));
-console.log("wrote privacy.html");
+console.log(`wrote privacy.html (광고 ${ADS_ON ? "켜짐 — 쿠키·제3자·국외이전 조항 포함" : "꺼짐 — 축약본"})`);
 
 /* --------------------------------------------- index.html 의 메타·JSON-LD */
 {

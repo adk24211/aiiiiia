@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>소개 — 손가락 마일리지</title>
+<meta name="description" content="손가락 마일리지는 한글 자판의 손가락 이동거리를 재는 도구입니다. 왜 만들었고 어떻게 계산하는지 설명합니다.">
+<meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121216" media="(prefers-color-scheme: dark)">
+<meta property="og:type" content="article">
+<meta property="og:title" content="소개 — 손가락 마일리지">
+<meta property="og:description" content="손가락 마일리지는 한글 자판의 손가락 이동거리를 재는 도구입니다. 왜 만들었고 어떻게 계산하는지 설명합니다.">
+<meta property="og:image" content="og.png">
+<meta property="og:locale" content="ko_KR">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="about.html">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316161a'/%3E%3Crect x='6' y='11' width='7' height='7' rx='1.6' fill='%23f7f4ee'/%3E%3Crect x='15.5' y='11' width='7' height='7' rx='1.6' fill='%23b03a12'/%3E%3Crect x='6' y='20' width='16.5' height='4.5' rx='1.4' fill='%23f7f4ee' opacity='.55'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<a class="skip" href="#main">본문으로 건너뛰기</a>
+<header class="masthead"><div class="wrap">
+  <a class="brand" href="./">
+    <svg width="26" height="26" viewBox="0 0 32 32" aria-hidden="true">
+      <rect width="32" height="32" rx="7" fill="currentColor"></rect>
+      <rect x="6" y="11" width="7" height="7" rx="1.6" fill="var(--paper)"></rect>
+      <rect x="15.5" y="11" width="7" height="7" rx="1.6" fill="var(--accent)"></rect>
+      <rect x="6" y="20" width="16.5" height="4.5" rx="1.4" fill="var(--paper)" opacity=".55"></rect>
+    </svg><span>손가락 마일리지</span></a>
+  <nav aria-label="사이트"><a class="btn btn-primary" href="./">내 글로 계산해 보기</a></nav>
+</div></header>
+<main id="main">
+<section><div class="wrap" style="max-width:44rem">
+  <h1>이 도구에 대하여</h1>
+  <p class="lede">손가락 마일리지는 내가 쓴 한글을 두벌식·세벌식 자판의 실제 타건열로 펼쳐,
+    손가락이 움직인 거리를 재 주는 계산기입니다.</p>
+
+  <h2>왜 만들었나</h2>
+  <p>“세벌식이 더 편하다”는 이야기는 오래됐지만, 정작 <strong>얼마나</strong> 편한지를 숫자로
+    보여 주는 한국어 도구는 찾기 어려웠습니다. 영문 자판에는 배열 비교 분석기가 여럿 있는데,
+    그 도구들은 한 글자가 한 타건이라는 전제로 만들어져 있어 한 음절이 두세 번의 타건으로
+    풀리는 한글에는 쓸 수 없습니다.</p>
+  <p>그래서 한글 음절을 초성·중성·종성으로 풀고, 각 자모를 자판표에 따라 실제 키로 옮긴 다음,
+    손가락이 그 키들을 오가며 움직인 거리를 재는 계산기를 만들었습니다. 재 보니
+    <strong>통념과 반대되는 결과</strong>가 나왔습니다. 세벌식은 타건 수도 시프트도 적지만
+    이동거리는 오히려 깁니다. 자모를 숫자행까지 펼쳐 놓았기 때문입니다.</p>
+
+  <h2>어떻게 계산하나</h2>
+  <p>자판 배열 데이터는 <a href="https://github.com/libhangul/libhangul" rel="noopener">libhangul</a>
+    원본 소스에서 기계로 추출했습니다. 사람이 배열도를 보고 옮겨 적은 값은 하나도 없습니다.
+    배열도를 눈으로 베끼다 키 하나를 틀리면 이런 도구는 통째로 신뢰를 잃기 때문입니다.
+    자동 검증이 저장소에 붙어 있어, 코드를 고칠 때마다 원본과 대조합니다.</p>
+  <p>계산 과정과 이 도구가 하지 못하는 일은
+    <a href="./#method">계산 방법과 출처</a>에 전부 적어 두었습니다.
+    브라우저에서 직접 돌려 볼 수 있는 <a href="test.html">자가 검증 페이지</a>도 있습니다.</p>
+
+  <h2>개인정보</h2>
+  <p>이 사이트에는 서버가 없습니다. 붙여 넣은 글과 불러온 카카오톡 파일은 브라우저 안에서만
+    읽고 계산하며, 외부로 보내는 코드 자체가 들어 있지 않습니다. 자세한 내용은
+    <a href="privacy.html">개인정보처리방침</a>을 보세요.</p>
+
+  <h2>만든 사람과 문의</h2>
+  <p>본 사이트 운영자가 만들었습니다. 자판 데이터의 오류 제보, 기능 제안, 그 밖의 문의는
+    <a href="https://github.com/adk24211/aiiiiia/issues" rel="noopener">GitHub 이슈</a>로 보내 주세요. 특히 <strong>배열이 틀렸다</strong>는 제보는 출처와 함께
+    주시면 가장 빨리 반영됩니다.</p>
+  <p class="small">소스 코드는 <a href="https://github.com/adk24211/aiiiiia" rel="noopener">공개되어 있습니다</a> (MIT).</p>
+</div></section></main>
+<footer><div class="wrap">
+  <ul style="list-style:none;padding:0;margin:0 0 1rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.88rem">
+    <li><a href="./">계산기</a></li>
+    <li><a href="dubeolsik.html">두벌식</a></li>
+    <li><a href="sebeolsik-390.html">세벌식 390</a></li>
+    <li><a href="sebeolsik-final.html">세벌식 최종</a></li>
+    <li><a href="about.html">소개</a></li>
+    <li><a href="privacy.html"><strong>개인정보처리방침</strong></a></li>
+  </ul>
+  <p class="tiny">자판 배열 데이터는 <a href="https://github.com/libhangul/libhangul" rel="noopener">libhangul</a>
+    원본에서 기계 추출했습니다 · 코드 MIT</p>
+</div></footer>
+</body>
+</html>

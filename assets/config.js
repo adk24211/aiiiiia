@@ -28,5 +28,13 @@
   sponsorUrl: "",
 
   // 소스 저장소 (이슈로 자판표 정정 제안 받는 곳)
-  repoUrl: "https://github.com/adk24211/aiiiiia"
+  repoUrl: "https://github.com/adk24211/aiiiiia",
+
+  // --- 개인정보처리방침·소개 페이지에 들어갈 정보 ---------------------
+  // 광고를 켜면 개인정보처리방침에 보호책임자와 연락처를 적어야 합니다(개인정보 보호법 제30조).
+  // 비워 두면 GitHub 이슈 링크로 대체되며, 광고를 켠 상태에서는 빌드가 경고합니다.
+  ownerName: "",
+  contactEmail: "",
+  // 방침 시행일. 비우면 "사이트 공개일"로 표기합니다.
+  policyDate: ""
 };
