@@ -144,29 +144,36 @@
 
   /* --------------------------------------------------------- 헤드라인 */
 
+  /* 완성형 음절과 낱자(ㅋㅋㅋ, ㅠㅠ)를 함께 센다 — 낱자만 있는 글도 한글이다 */
+  function hangulCount(a) { return a.text.syllables + a.text.jamoChars; }
+
   function renderHeadline(a) {
     var base = a.results[0], rest = a.results.slice(1, 3);
     var d = dist(base.mm);
+    var n = hangulCount(a);
     $("#bigValue").textContent = d.v;
     $("#bigUnit").textContent = d.u;
     $("#headlineEyebrow").textContent = base.layout.name + " 기준 · 손가락이 움직인 거리";
 
     var v;
-    if (a.text.syllables === 0) {
+    if (n === 0) {
       v = "한글이 없습니다. 위에 한국어 문장을 넣어 주세요.";
       $("#bigValue").textContent = "0"; $("#bigUnit").textContent = "㎜";
     } else {
       var cmp = rest.map(function (r) {
-        var diff = (r.mm - base.mm) / Math.max(1, base.mm) * 100;
-        return J(r.layout.short, "은") + " " + distStr(r.mm) +
-          " <strong>(" + (diff >= 0 ? "+" : "") + nf(diff, 0) + "%)</strong>";
+        // 아주 짧은 글에서는 한쪽이 0 이 되어 ±100% 같은 무의미한 값이 나온다
+        var pctTxt = (base.mm < 1 || r.mm < 1) ? "" :
+          " <strong>(" + (r.mm >= base.mm ? "+" : "") +
+          nf((r.mm - base.mm) / base.mm * 100, 0) + "%)</strong>";
+        return J(r.layout.short, "은") + " " + distStr(r.mm) + pctTxt;
       }).join(", ");
       v = "같은 글을 " + cmp + ".";
+      if (n < 10) v += ' <span class="small">글이 짧아 차이가 우연에 좌우됩니다. 문장 몇 개는 넣어 보세요.</span>';
     }
     $("#verdict").innerHTML = v;
 
     var chips = [
-      "한글 " + nf(a.text.syllables) + "자",
+      "한글 " + nf(n) + "자",
       "총 타건 " + nf(base.totalStrokes) + "회",
       "시프트 " + nf(base.shifts) + "회"
     ];
@@ -195,7 +202,7 @@
   function renderTable(a) {
     var rs = a.results;
     $("#compareCaption").textContent =
-      "한글 " + nf(a.text.syllables) + "자를 각 자판으로 쳤을 때의 지표 " + METRICS.length + "가지" +
+      "한글 " + nf(hangulCount(a)) + "자를 각 자판으로 쳤을 때의 지표 " + METRICS.length + "가지" +
       " (키 간격 " + S.opts.unit + "㎜, " + MODEL_KO[a.options.model] + " 모형)";
     $("#compareHead").innerHTML = '<th scope="col">지표</th>' + rs.map(function (r) {
       return '<th scope="col">' + esc(r.layout.short) + "</th>";
@@ -389,7 +396,7 @@
 
   function renderFindings(a) {
     var rs = a.results, base = rs[0], out = [];
-    if (a.text.syllables === 0) {
+    if (hangulCount(a) === 0) {
       $("#findings").innerHTML = '<li data-mark="—">계산할 한글이 없습니다.</li>';
       return;
     }
@@ -402,10 +409,13 @@
     var near = other(function (r, b) { return r.mm < b.mm; });
 
     if (rs.length > 1) {
-      var diff = (far.mm - base.mm) / Math.max(1, base.mm) * 100;
-      out.push([J(base.layout.short, "으로") + " 이 글을 치면 손가락이 " + distStr(base.mm) + " 움직입니다. " +
-        J(far.layout.short, "이었") + "다면 " + distStr(far.mm) + " — " + nf(Math.abs(diff), 0) + "% " +
-        (diff >= 0 ? "더 멉니다" : "덜 갑니다") + ".", "1"]);
+      var head = J(base.layout.short, "으로") + " 이 글을 치면 손가락이 " + distStr(base.mm) + " 움직입니다.";
+      if (base.mm >= 1 && far.mm >= 1) {
+        var diff = (far.mm - base.mm) / base.mm * 100;
+        head += " " + J(far.layout.short, "이었") + "다면 " + distStr(far.mm) + " — " +
+          nf(Math.abs(diff), 0) + "% " + (diff >= 0 ? "더 멉니다" : "덜 갑니다") + ".";
+      }
+      out.push([head, "1"]);
     }
     var minShift = rs.reduce(function (p, c) { return c.shifts < p.shifts ? c : p; });
     if (base.shifts - minShift.shifts >= 3)
@@ -424,6 +434,8 @@
         (ratio >= 1.5 ? "로, " + nf(ratio, 1) + "배 낮아집니다." : "로 줄어듭니다."), "4"]);
     }
     var maxAlt = rs.reduce(function (p, c) { return c.altPct > p.altPct ? c : p; });
+    // 손 교대가 거의 없는 글(ㅋㅋㅋ 같은)에서 "0%로 가장 높습니다"가 나오지 않게
+    if (maxAlt.altPct >= 10)
     out.push([J(maxAlt.layout.short, "이") + " 손 교대율 " + pct(maxAlt.altPct) + "로 가장 높습니다. " +
       (maxAlt.layout.id === "dubeol" ? "자음은 왼손, 모음은 오른손이라는 구조 때문입니다." :
        "초성·중성·종성이 손을 번갈아 쓰도록 배치된 결과입니다."), "5"]);
@@ -470,7 +482,7 @@
     g.fillText(d.u, 64 + wv + 14, 292);
 
     g.fillStyle = "#4a4a52"; g.font = "400 28px " + FONT;
-    g.fillText("한글 " + nf(a.text.syllables) + "자 · 타건 " + nf(base.totalStrokes) +
+    g.fillText("한글 " + nf(hangulCount(a)) + "자 · 타건 " + nf(base.totalStrokes) +
       "회 · 시프트 " + nf(base.shifts) + "회", 64, 344);
 
     var max = Math.max.apply(null, a.results.map(function (r) { return r.mm; })) || 1;
@@ -564,15 +576,15 @@
     renderUnlock();
     drawCard();
 
-    var msg = a.text.syllables === 0 ? "한글이 없어 결과가 비어 있습니다." :
-      a.results[0].layout.short + " 기준 " + distStr(a.results[0].mm) + ", 한글 " + nf(a.text.syllables) + "자.";
+    var msg = hangulCount(a) === 0 ? "한글이 없어 결과가 비어 있습니다." :
+      a.results[0].layout.short + " 기준 " + distStr(a.results[0].mm) + ", 한글 " + nf(hangulCount(a)) + "자.";
     if (msg !== lastLive) {
       lastLive = msg;
       clearTimeout(liveTimer);
       liveTimer = setTimeout(function () { $("#liveRegion").textContent = msg; }, 700);
     }
     $("#srcStatus").textContent = S.text.length
-      ? nf(S.text.length) + "자 입력됨 · 한글 " + nf(a.text.syllables) + "자"
+      ? nf(S.text.length) + "자 입력됨 · 한글 " + nf(hangulCount(a)) + "자"
       : "";
     $("#sourceBadge").textContent =
       S.source === "demo" ? "예시 문장으로 보는 중" :
@@ -644,7 +656,7 @@
     g.fillText(J(base.layout.name, "으로") + " 이 글을 칠 때 손가락이 움직이는 거리", M, y);
     y += 72 * k;
     g.fillStyle = "#6f6f79"; g.font = "400 " + px(54) + FONT;
-    g.fillText("한글 " + nf(a.text.syllables) + "자 · 총 타건 " + nf(base.totalStrokes) +
+    g.fillText("한글 " + nf(hangulCount(a)) + "자 · 총 타건 " + nf(base.totalStrokes) +
       "회 · 시프트 " + nf(base.shifts) + "회" + (S.kakaoLabel ? " · " + S.kakaoLabel : ""), M, y);
     y += 90 * k;
 
@@ -733,6 +745,7 @@
   }
 
   window.KM_APP = { S: S, render: render, J: J, keyLabels: keyLabels, METRICS: METRICS,
+                    hangulCount: hangulCount,
                     layoutSheetSvg: layoutSheetSvg, drawPoster: drawPoster,
                     layoutList: layoutList, renderSoon: renderSoon, dist: dist, distStr: distStr, nf: nf, esc: esc, store: store };
 })();

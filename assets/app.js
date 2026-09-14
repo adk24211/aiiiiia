@@ -573,7 +573,7 @@
     push("계산 조건", "키 간격 " + a.options.unit + "mm",
          "모형 " + ({ kla: "표준", keep: "손가락 유지", home: "매번 홈 복귀" }[a.options.model]),
          "세벌식 겹모음 " + (a.options.leadStyle ? "오른손 자리" : "항상 왼손 자리"));
-    push("입력", "한글 " + a.text.syllables + "자", "계산 제외 " + a.text.skipped + "자",
+    push("입력", "한글 " + A.hangulCount(a) + "자", "계산 제외 " + a.text.skipped + "자",
          S.kakaoLabel || (S.source === "demo" ? "예시 문장" : "직접 넣은 글"));
     push("");
 
