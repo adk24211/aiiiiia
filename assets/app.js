@@ -491,9 +491,14 @@
       $("#repoLinkSlot").insertAdjacentHTML("afterend",
         '<li><a href="' + esc(CFG.sponsorUrl) + '" rel="noopener">후원하기</a></li>');
 
-    if (CFG.coupangPartnerId)
-      $("#disclosureSlot").innerHTML = '<p class="ad-disclosure" role="note"><b>광고</b> · 이 페이지는 ' +
+    if (CFG.coupangPartnerId) {
+      var note = '<p class="ad-disclosure" role="note"><b>광고</b> · 이 페이지는 ' +
         "쿠팡 파트너스 활동의 일환으로, 이에 따른 일정액의 수수료를 제공받습니다.</p>";
+      $("#disclosureSlot").innerHTML = note;
+      // 심사지침은 본문 첫 부분과 끝 부분 양쪽 표시를 권고한다
+      var tail = $("#methodBody");
+      if (tail) tail.insertAdjacentHTML("beforeend", note);
+    }
 
     // 애드센스: 클라이언트 ID와 슬롯 ID가 둘 다 있을 때만 실제 광고 단위를 만든다.
     if (CFG.adsenseClient) {

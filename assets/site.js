@@ -58,6 +58,11 @@
       note.innerHTML = "<b>광고</b> · 이 페이지는 쿠팡 파트너스 활동의 일환으로, " +
         "이에 따른 일정액의 수수료를 제공받습니다.";
       wrap.insertBefore(note, wrap.firstChild);
+      // 본문 끝에도 한 번 더 (심사지침의 반복 표시 권고)
+      var last = main.querySelectorAll(".wrap");
+      var tail = last[last.length - 1];
+      if (tail && tail !== wrap) tail.appendChild(note.cloneNode(true));
+      else if (tail === wrap) wrap.appendChild(note.cloneNode(true));
     }
   }
 
