@@ -2,7 +2,7 @@
  * 수익화 요소는 전부 여기서 켠다. 값이 비어 있으면 그 블록은 화면에 아예 나오지 않는다.
  * (빈 값으로 두고 배포해도 사이트는 완전히 동작한다.)
  */
-window.KM_CONFIG = {
+(typeof window !== "undefined" ? window : globalThis).KM_CONFIG = {
   // 사이트 주소. 커스텀 도메인을 붙였다면 여기에. 공유 카드 워터마크와 canonical에 쓰인다.
   siteUrl: "",
 

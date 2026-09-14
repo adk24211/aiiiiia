@@ -39,13 +39,23 @@
     A.renderSoon(260);
     writeHash();
   });
-  function DEMO_TEXT() { return $("#demoBtn").dataset.demo; }
+  function DEMO_TEXT() { return C.presets[0][1]; }
 
-  $("#demoBtn").addEventListener("click", function () {
-    src.value = DEMO_TEXT(); S.text = src.value; S.source = "typed";
-    S.kakaoLabel = ""; S.kakao = null; $("#kakaoPanel").hidden = true;
-    A.render(); writeHash(); src.focus();
-  });
+  /* 예시 글 버튼들 */
+  (function () {
+    var row = $("#presetRow");
+    C.presets.forEach(function (p, i) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "btn"; b.textContent = p[0];
+      b.addEventListener("click", function () {
+        src.value = p[1]; S.text = p[1]; S.source = i === 0 ? "demo" : "typed";
+        S.kakaoLabel = ""; S.kakao = null; $("#kakaoPanel").hidden = true;
+        A.render(); writeHash();
+        document.getElementById("results").scrollIntoView({ block: "start", behavior: "smooth" });
+      });
+      row.appendChild(b);
+    });
+  })();
   $("#clearBtn").addEventListener("click", function () {
     src.value = ""; S.text = DEMO_TEXT(); S.source = "demo";
     S.kakaoLabel = ""; S.kakao = null; $("#kakaoPanel").hidden = true;
@@ -310,8 +320,8 @@
       '<p class="tiny">' + nf(tried) + "가지를 전부 시험했습니다 (앞 " + nf(sampleLen) + "자 표본).</p>" +
       '<ul class="findings">' + top.map(function (r, i) {
         return '<li data-mark="' + (i + 1) + '"><span><strong class="mono">' + esc(r.pair[0]) + " ⇄ " +
-          esc(r.pair[1]) + "</strong> — " + esc(labelFor(L, r.pair[0]).slice(3)) + " 와 " +
-          esc(labelFor(L, r.pair[1]).slice(3)) + " 를 맞바꾸면 이동거리가 <strong>" +
+          esc(r.pair[1]) + "</strong> — " + esc(A.J(labelFor(L, r.pair[0]).slice(3), "와")) + " " +
+          esc(A.J(labelFor(L, r.pair[1]).slice(3), "을")) + " 맞바꾸면 이동거리가 <strong>" +
           nf(r.gain, 1) + "%</strong> 줄어듭니다. " +
           '<button class="btn" type="button" data-apply="' + i + '">적용</button></span></li>';
       }).join("") + "</ul>";
@@ -426,29 +436,24 @@
       $("#disclosureSlot").innerHTML = '<p class="disclosure">이 페이지는 쿠팡 파트너스 활동의 일환으로, ' +
         "이에 따른 일정액의 수수료를 제공받습니다.</p>";
 
-    var ld = {
-      "@context": "https://schema.org", "@graph": [
-        { "@type": "WebApplication", name: "손가락 마일리지",
-          applicationCategory: "UtilityApplication", operatingSystem: "Any",
-          description: "한국어 텍스트를 두벌식·세벌식 자판의 실제 타건열로 전개해 손가락 이동거리를 계산하는 도구",
-          offers: { "@type": "Offer", price: "0", priceCurrency: "KRW" }, inLanguage: "ko" },
-        { "@type": "FAQPage", mainEntity: C.faq.map(function (f) {
-            return { "@type": "Question", name: f[0],
-                     acceptedAnswer: { "@type": "Answer", text: f[1].replace(/<[^>]+>/g, "") } };
-          }) }
-      ]
-    };
-    var sc = document.createElement("script");
-    sc.type = "application/ld+json";
-    sc.textContent = JSON.stringify(ld);
-    document.head.appendChild(sc);
-
+    // 애드센스: 클라이언트 ID와 슬롯 ID가 둘 다 있을 때만 실제 광고 단위를 만든다.
     if (CFG.adsenseClient) {
-      var s = document.createElement("script");
-      s.async = true; s.crossOrigin = "anonymous";
-      s.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" +
-        encodeURIComponent(CFG.adsenseClient);
-      document.head.appendChild(s);
+      var slots = [["adSlotTop", CFG.adsenseSlotTop], ["adSlotBottom", CFG.adsenseSlotBottom]]
+        .filter(function (p) { return p[1] && document.getElementById(p[0]); });
+      if (slots.length) {
+        var sc2 = document.createElement("script");
+        sc2.async = true; sc2.crossOrigin = "anonymous";
+        sc2.src = "https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=" +
+          encodeURIComponent(CFG.adsenseClient);
+        document.head.appendChild(sc2);
+        slots.forEach(function (p) {
+          var box = document.getElementById(p[0]);
+          box.innerHTML = '<p class="promo-label" style="display:block;margin:1.4rem 0 .3rem">광고</p>' +
+            '<ins class="adsbygoogle" style="display:block" data-ad-client="' + esc(CFG.adsenseClient) +
+            '" data-ad-slot="' + esc(p[1]) + '" data-ad-format="auto" data-full-width-responsive="true"></ins>';
+          try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch (e) {}
+        });
+      }
     }
   }
 
@@ -466,7 +471,55 @@
       });
     }
     if (e.target && e.target.id === "csvBtn") downloadCsv();
+    if (e.target && e.target.id === "posterBtn") downloadPoster(e.target);
+    if (e.target && e.target.id === "sheetBtn") downloadSheet();
   });
+
+  function saveBlob(blob, name) {
+    var url = URL.createObjectURL(blob), el = document.createElement("a");
+    el.href = url; el.download = name;
+    document.body.appendChild(el); el.click(); el.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 6000);
+  }
+
+  /* A3 300dpi 포스터. 모바일에서 캔버스 할당이 실패하면 A4로 낮춘다. */
+  function downloadPoster(btn) {
+    var out = document.getElementById("unlockMsg");
+    var sizes = [[3508, 4961, "A3"], [2480, 3508, "A4"], [1754, 2480, "A5"]];   // 세로
+    if (btn) { btn.disabled = true; btn.textContent = "만드는 중…"; }
+    setTimeout(function () {
+      var cv = document.createElement("canvas"), done = false;
+      for (var i = 0; i < sizes.length && !done; i++) {
+        try {
+          if (!window.KM_APP.drawPoster(cv, sizes[i][0], sizes[i][1])) continue;
+          /* 빈 캔버스가 나오는 환경(메모리 한계)을 걸러낸다 */
+          var probe = cv.getContext("2d").getImageData(10, 10, 1, 1).data;
+          if (probe[3] === 0) continue;
+          done = sizes[i];
+        } catch (err) { /* 더 작은 크기로 재시도 */ }
+      }
+      if (btn) { btn.disabled = false; btn.textContent = "A3 포스터 내려받기"; }
+      if (!done) { if (out) out.textContent = "이 기기에서는 포스터를 만들지 못했습니다. CSV를 이용해 주세요."; return; }
+      var label = done[2];
+      cv.toBlob(function (blob) {
+        if (!blob) { if (out) out.textContent = "이미지를 만들지 못했습니다."; return; }
+        saveBlob(blob, "손가락-마일리지-포스터-" + label + ".png");
+        if (out) out.textContent = label + " 300dpi 포스터를 저장했습니다.";
+      }, "image/png");
+    }, 30);
+  }
+
+  function downloadSheet() {
+    var list = window.KM_APP.layoutList();
+    list.forEach(function (L, i) {
+      setTimeout(function () {
+        saveBlob(new Blob([window.KM_APP.layoutSheetSvg(L)], { type: "image/svg+xml" }),
+                 "자판-치트시트-" + L.short + ".svg");
+      }, i * 250);
+    });
+    var out = document.getElementById("unlockMsg");
+    if (out) out.textContent = "자판 " + list.length + "개의 치트시트를 저장했습니다.";
+  }
 
   function sha256Hex(s) {
     if (!(window.crypto && crypto.subtle)) return Promise.resolve("");
@@ -505,7 +558,6 @@
     if (!document.documentElement.getAttribute("data-theme")) A.render();
   });
 
-  $("#demoBtn").dataset.demo = S.text;
   if (!readHash()) src.value = S.text;      // 빈 상태 금지 — 무엇을 재고 있는지 바로 보이게
   renderLongform();
   buildEditor();

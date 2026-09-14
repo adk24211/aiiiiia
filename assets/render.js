@@ -7,11 +7,8 @@
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
 
-  var DEMO = "안녕하세요 오늘 날씨가 참 좋네요 밖에 나가서 산책이라도 할까요 값싼 물건도 많이 샀어요\n" +
-             "읽던 책을 다시 펼쳤다 ㅋㅋㅋ ㅠㅠ 넓은 하늘 아래 우리는 웃었다 의사 선생님께 여쭤봤어요";
-
   var S = {
-    text: DEMO,
+    text: C.presets[0][1],
     source: "demo",              // demo | typed | kakao
     kakao: null,
     kakaoLabel: "",
@@ -42,6 +39,30 @@
   }
   function distStr(mm) { var d = dist(mm); return d.v + d.u; }
   function pct(n, d) { return nf(n, d === undefined ? 1 : d) + "%"; }
+  /* 조사 붙이기. 낱자(ㄱ=기역, ㅏ=아)와 숫자(390=삼구공)의 끝소리까지 본다. */
+  function lastJong(w) {
+    var DIGIT = [1, 8, 0, 1, 0, 0, 1, 8, 8, 0];   // 영 일 이 삼 사 오 육 칠 팔 구
+    for (var i = String(w).length - 1; i >= 0; i--) {
+      var c = String(w).charCodeAt(i);
+      if (c >= 0xAC00 && c <= 0xD7A3) { var t = (c - 0xAC00) % 28; return t === 0 ? 0 : (t === 8 ? 8 : 1); }
+      if (c >= 0x3131 && c <= 0x314E) return 1;    // 자음 이름은 모두 받침으로 끝난다 (기역, 쌍기역…)
+      if (c >= 0x314F && c <= 0x3163) return 0;    // 모음 이름은 받침이 없다 (아, 야, 의…)
+      if (c >= 0x30 && c <= 0x39) return DIGIT[c - 0x30];
+      if (c === 32 || c === 41 || c === 93) continue;   // 공백·닫는 괄호는 건너뛴다
+      return 1;
+    }
+    return 1;
+  }
+  var JOSA = {
+    "을": ["를", "을"], "와": ["와", "과"], "은": ["는", "은"], "이": ["가", "이"],
+    "이었": ["였", "이었"], "으로": ["로", "으로"]
+  };
+  function J(w, kind) {
+    var j = lastJong(w);
+    if (kind === "으로") return w + (j === 0 || j === 8 ? "로" : "으로");
+    return w + JOSA[kind][j ? 1 : 0];
+  }
+
   function isDark() {
     var t = document.documentElement.getAttribute("data-theme");
     if (t) return t === "dark";
@@ -128,7 +149,7 @@
     } else {
       var cmp = rest.map(function (r) {
         var diff = (r.mm - base.mm) / Math.max(1, base.mm) * 100;
-        return r.layout.short + "은 " + distStr(r.mm) +
+        return J(r.layout.short, "은") + " " + distStr(r.mm) +
           " <strong>(" + (diff >= 0 ? "+" : "") + nf(diff, 0) + "%)</strong>";
       }).join(", ");
       v = "같은 글을 " + cmp + ".";
@@ -361,18 +382,18 @@
 
     if (rs.length > 1) {
       var diff = (far.mm - base.mm) / Math.max(1, base.mm) * 100;
-      out.push([base.layout.short + "으로 이 글을 치면 손가락이 " + distStr(base.mm) + " 움직입니다. " +
-        far.layout.short + "이었다면 " + distStr(far.mm) + " — " + nf(Math.abs(diff), 0) + "% " +
+      out.push([J(base.layout.short, "으로") + " 이 글을 치면 손가락이 " + distStr(base.mm) + " 움직입니다. " +
+        J(far.layout.short, "이었") + "다면 " + distStr(far.mm) + " — " + nf(Math.abs(diff), 0) + "% " +
         (diff >= 0 ? "더 멉니다" : "덜 갑니다") + ".", "1"]);
     }
     var minShift = rs.reduce(function (p, c) { return c.shifts < p.shifts ? c : p; });
     if (base.shifts - minShift.shifts >= 3)
-      out.push([minShift.layout.short + "은 시프트를 " + nf(base.shifts) + "회에서 " +
+      out.push([J(minShift.layout.short, "은") + " 시프트를 " + nf(base.shifts) + "회에서 " +
         nf(minShift.shifts) + "회로 줄입니다. 새끼손가락이 그만큼 덜 뻗습니다.", "2"]);
 
     var maxNum = rs.reduce(function (p, c) { return c.numRowPct > p.numRowPct ? c : p; });
     if (maxNum.numRowPct - base.numRowPct >= 3)
-      out.push(["대신 " + maxNum.layout.short + "은 숫자행 타건이 " + pct(base.numRowPct) + " → " +
+      out.push(["대신 " + J(maxNum.layout.short, "은") + " 숫자행 타건이 " + pct(base.numRowPct) + " → " +
         pct(maxNum.numRowPct) + "로 늘어, 손이 위로 더 자주 올라갑니다. 이동거리가 늘어나는 주범입니다.", "3"]);
 
     var minSfb = rs.reduce(function (p, c) { return c.sfbPct < p.sfbPct ? c : p; });
@@ -382,7 +403,7 @@
         (ratio >= 1.5 ? "로, " + nf(ratio, 1) + "배 낮아집니다." : "로 줄어듭니다."), "4"]);
     }
     var maxAlt = rs.reduce(function (p, c) { return c.altPct > p.altPct ? c : p; });
-    out.push([maxAlt.layout.short + "이 손 교대율 " + pct(maxAlt.altPct) + "로 가장 높습니다. " +
+    out.push([J(maxAlt.layout.short, "이") + " 손 교대율 " + pct(maxAlt.altPct) + "로 가장 높습니다. " +
       (maxAlt.layout.id === "dubeol" ? "자음은 왼손, 모음은 오른손이라는 구조 때문입니다." :
        "초성·중성·종성이 손을 번갈아 쓰도록 배치된 결과입니다."), "5"]);
 
@@ -397,7 +418,7 @@
         "입니다. ㅋㅋㅋ, ㅠㅠ 같은 반복이 많은 글입니다.", "7"]);
 
     if (S.kakaoLabel)
-      out.push([S.kakaoLabel + " 기준입니다.", "8"]);
+      out.push([esc(S.kakaoLabel) + " 기준입니다.", "8"]);   // 화자 이름은 사용자 파일에서 온다
 
     $("#findings").innerHTML = out.slice(0, 7).map(function (p) {
       return '<li data-mark="' + p[1] + '">' + p[0] + "</li>";
@@ -419,7 +440,7 @@
     g.fillStyle = "#6f6f79"; g.font = "600 26px " + FONT;
     g.fillText("손가락 마일리지", 64, 84);
     g.fillStyle = "#16161a"; g.font = "700 34px " + FONT;
-    g.fillText(base.layout.name + "으로 이 글을 치면", 64, 148);
+    g.fillText(J(base.layout.name, "으로") + " 이 글을 치면", 64, 148);
 
     g.font = "800 152px " + FONT; g.fillStyle = "#16161a";
     g.fillText(d.v, 64, 292);
@@ -492,7 +513,9 @@
       (open
         ? '<p class="small"><strong>열려 있습니다.</strong> 아래 버튼으로 내려받으세요.</p>' +
           '<div class="row-actions"><button class="btn btn-primary" type="button" id="posterBtn">A3 포스터 내려받기</button>' +
-          '<button class="btn" type="button" id="csvBtn">CSV 내려받기</button></div>'
+          '<button class="btn" type="button" id="csvBtn">CSV 내려받기</button>' +
+          '<button class="btn" type="button" id="sheetBtn">키캡 치트시트 SVG</button>' +
+          '<span class="tiny" id="unlockMsg" role="status"></span></div>'
         : '<div class="row-actions"><a class="btn btn-primary" href="' + esc(CFG.unlockUrl) +
           '" rel="noopener" target="_blank">결제하고 코드 받기</a>' +
           '<label class="small">코드 <input type="text" id="unlockCode" size="12" autocomplete="off"></label>' +
@@ -537,5 +560,153 @@
     renderTimer = setTimeout(render, ms === undefined ? 250 : ms);
   }
 
-  window.KM_APP = { S: S, render: render, renderSoon: renderSoon, dist: dist, distStr: distStr, nf: nf, esc: esc, store: store };
+  /* 자판 배열만 그린 SVG (키캡 각인용 치트시트). 타건 수 없이 배열만. */
+  function layoutSheetSvg(L) {
+    var info = keyLabels(L), rows = E.ANSI_ROWS, parts = [], i, j;
+    var W = 15.5 * UPX + PAD * 2, H = 4 * UPX + PAD * 2;
+    for (i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      for (j = 0; j < r.keys.length; j++) {
+        var key = r.keys.charAt(j), x = r.xoff + j, lab = info[key];
+        parts.push('<rect x="' + (PAD + x * UPX + .6).toFixed(2) + '" y="' + (PAD + i * UPX + .6).toFixed(2) +
+          '" width="' + (UPX - 1.2).toFixed(2) + '" height="' + (UPX - 1.2).toFixed(2) +
+          '" rx="2.4" fill="none" stroke="#999" stroke-width=".5"></rect>');
+        var tx = (PAD + (x + .5) * UPX).toFixed(2);
+        parts.push('<text x="' + tx + '" y="' + (PAD + (i + .86) * UPX).toFixed(2) +
+          '" text-anchor="middle" font-size="4" fill="#999">' + esc(key) + "</text>");
+        if (lab) {
+          if (lab.shift.length) parts.push('<text x="' + tx + '" y="' + (PAD + (i + .3) * UPX).toFixed(2) +
+            '" text-anchor="middle" font-size="4.4" font-weight="600" fill="#555">' + esc(lab.shift.join("")) + "</text>");
+          parts.push('<text x="' + tx + '" y="' + (PAD + (i + .64) * UPX).toFixed(2) +
+            '" text-anchor="middle" font-size="7" font-weight="700" fill="#111">' + esc(lab.base.join("")) + "</text>");
+        }
+      }
+    }
+    return '<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' +
+      W.toFixed(1) + " " + H.toFixed(1) + '" width="' + (W * 4).toFixed(0) + '" height="' + (H * 4).toFixed(0) +
+      '"><title>' + esc(L.name) + ' 배열</title><rect width="100%" height="100%" fill="#fff"></rect>' +
+      parts.join("") + "</svg>";
+  }
+
+  /* 고해상도 포스터 (세로). 남은 높이에 맞춰 자판 그림 크기를 계산하므로 자판이 4개여도 넘치지 않는다. */
+  function drawPoster(cv, W, H) {
+    var a = S.last; if (!a) return false;
+    var g = cv.getContext("2d");
+    if (!g) return false;
+    cv.width = W; cv.height = H;
+    var k = W / 3508;                       // A3 세로 300dpi 기준 배율
+    var FONT = '"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif';
+    var px = function (n) { return (n * k).toFixed(1) + "px "; };
+    var M = 220 * k, IW = W - M * 2;
+    var n = a.results.length;
+
+    g.fillStyle = "#f7f4ee"; g.fillRect(0, 0, W, H);
+    g.fillStyle = "#b03a12"; g.fillRect(0, 0, W, 30 * k);
+
+    /* ── 머리 ── */
+    var base = a.results[0], d = dist(base.mm);
+    var y = M + 70 * k;
+    g.fillStyle = "#8a8780"; g.font = "700 " + px(58) + FONT;
+    g.fillText("손가락 마일리지", M, y);
+    y += 320 * k;
+    g.fillStyle = "#16161a"; g.font = "800 " + px(360) + FONT;
+    g.fillText(d.v, M, y);
+    var wv = g.measureText(d.v).width;
+    g.font = "700 " + px(128) + FONT; g.fillStyle = "#b03a12";
+    g.fillText(d.u, M + wv + 24 * k, y);
+    y += 92 * k;
+    g.fillStyle = "#4a4a52"; g.font = "500 " + px(66) + FONT;
+    g.fillText(J(base.layout.name, "으로") + " 이 글을 칠 때 손가락이 움직이는 거리", M, y);
+    y += 72 * k;
+    g.fillStyle = "#6f6f79"; g.font = "400 " + px(54) + FONT;
+    g.fillText("한글 " + nf(a.text.syllables) + "자 · 총 타건 " + nf(base.totalStrokes) +
+      "회 · 시프트 " + nf(base.shifts) + "회" + (S.kakaoLabel ? " · " + S.kakaoLabel : ""), M, y);
+    y += 90 * k;
+
+    /* ── 남은 높이에 맞춰 자판 그림 크기 결정 ── */
+    var footH = 90 * k;
+    var rowH = 86 * k, tableH = rowH * (METRICS.length + 1) + 60 * k;
+    var titleH = 74 * k, gapH = 54 * k;
+    var avail = H - M - footH - tableH - y;
+    var ku = Math.min(IW / 15.5, (avail / n - titleH - gapH) / 4);
+    var kbW = ku * 15.5, kbX = M + (IW - kbW) / 2;
+    // 자판이 폭에 걸려 더 못 커질 때 남는 높이를 위아래로 나눠 균형을 맞춘다
+    y += Math.max(0, avail - n * (titleH + gapH + ku * 4)) * 0.4;
+
+    a.results.forEach(function (res) {
+      var maxc = 1, c;
+      for (c = 0; c < 128; c++) if (res.keyCount[c] > maxc) maxc = res.keyCount[c];
+      g.fillStyle = "#16161a"; g.font = "700 " + px(58) + FONT;
+      g.fillText(res.layout.name + "  ·  " + distStr(res.mm) + "  ·  타건 " + nf(res.keyStrokes) + "회", kbX, y + titleH * 0.7);
+      var top = y + titleH, info = keyLabels(res.layout);
+      E.ANSI_ROWS.forEach(function (row, ri) {
+        for (var j = 0; j < row.keys.length; j++) {
+          var key = row.keys.charAt(j), code = key.charCodeAt(0);
+          var cnt = res.keyCount[code] || 0, t = cnt / maxc;
+          var L0 = 96 - 56 * Math.pow(t, 0.6);
+          var x = kbX + (row.xoff + j) * ku, ky = top + ri * ku;
+          g.fillStyle = cnt ? "hsl(205 72% " + L0.toFixed(1) + "%)" : "#fffdf9";
+          g.strokeStyle = "#ded7c9"; g.lineWidth = Math.max(1, 2 * k);
+          g.beginPath();
+          if (g.roundRect) g.roundRect(x + ku * .03, ky + ku * .03, ku * .94, ku * .94, ku * .1);
+          else g.rect(x + ku * .03, ky + ku * .03, ku * .94, ku * .94);
+          g.fill(); g.stroke();
+          var ink = cnt && L0 < 58 ? "#ffffff" : "#10161c";
+          var lab = info[key];
+          g.textAlign = "center";
+          if (lab) {
+            g.fillStyle = ink;
+            if (lab.shift.length) {
+              g.font = "600 " + (ku * .2).toFixed(1) + "px " + FONT;
+              g.fillText(lab.shift.join(""), x + ku / 2, ky + ku * .3);
+            }
+            g.font = "700 " + (ku * .33).toFixed(1) + "px " + FONT;
+            g.fillText(lab.base.join("") || "·", x + ku / 2, ky + ku * (lab.shift.length ? .64 : .58));
+            g.font = "500 " + (ku * .19).toFixed(1) + "px " + FONT;
+            g.fillText(String(cnt), x + ku / 2, ky + ku * .89);
+          } else {
+            g.fillStyle = "#b3aea7"; g.font = "400 " + (ku * .22).toFixed(1) + "px " + FONT;
+            g.fillText(key, x + ku / 2, ky + ku * .62);
+          }
+          g.textAlign = "left";
+        }
+      });
+      y = top + ku * 4 + gapH;
+    });
+
+    /* ── 지표 표 ── */
+    y += 20 * k;
+    var labelW = IW * 0.34, colW = (IW - labelW) / n;
+    g.font = "700 " + px(50) + FONT; g.fillStyle = "#8a8780";
+    a.results.forEach(function (r, i) {
+      g.textAlign = "right";
+      g.fillText(r.layout.short, M + labelW + colW * (i + 1) - 10 * k, y);
+      g.textAlign = "left";
+    });
+    METRICS.forEach(function (m, mi) {
+      var ry = y + (mi + 1) * rowH;
+      g.strokeStyle = "#e2dbcd"; g.lineWidth = Math.max(1, 2 * k);
+      g.beginPath(); g.moveTo(M, ry - rowH * .62); g.lineTo(W - M, ry - rowH * .62); g.stroke();
+      g.fillStyle = "#16161a"; g.font = "600 " + px(50) + FONT;
+      g.fillText(C.metrics[m.k][0], M, ry);
+      g.font = "400 " + px(50) + FONT; g.fillStyle = "#4a4a52";
+      a.results.forEach(function (r, i) {
+        g.textAlign = "right";
+        g.fillText(m.fmt(r), M + labelW + colW * (i + 1) - 10 * k, ry);
+        g.textAlign = "left";
+      });
+    });
+
+    /* ── 꼬리 ── */
+    g.fillStyle = "#8a8780"; g.font = "400 " + px(44) + FONT;
+    g.fillText("자판 데이터: libhangul · 키 간격 " + S.opts.unit + "㎜ · " +
+      (S.opts.model === "keep" ? "손가락 유지 모델" : "홈 복귀 모델"), M, H - M * .55);
+    g.textAlign = "right"; g.fillStyle = "#16161a"; g.font = "700 " + px(50) + FONT;
+    g.fillText(CFG.siteUrl ? CFG.siteUrl.replace(/^https?:\/\//, "") : "손가락 마일리지", W - M, H - M * .55);
+    g.textAlign = "left";
+    return true;
+  }
+
+  window.KM_APP = { S: S, render: render, J: J, layoutSheetSvg: layoutSheetSvg, drawPoster: drawPoster,
+                    layoutList: layoutList, renderSoon: renderSoon, dist: dist, distStr: distStr, nf: nf, esc: esc, store: store };
 })();

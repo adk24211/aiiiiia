@@ -11,10 +11,102 @@
 <meta property="og:title" content="손가락 마일리지 — 한글 자판 이동거리 계산기">
 <meta property="og:description" content="내 카톡 1년치를 치는 데 손가락은 몇 km 움직였을까? 두벌식·세벌식을 실제 타건열로 비교합니다.">
 <meta property="og:image" content="og.png">
+<link rel="canonical" href="index.html">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316161a'/%3E%3Crect x='6' y='11' width='7' height='7' rx='1.6' fill='%23f7f4ee'/%3E%3Crect x='15.5' y='11' width='7' height='7' rx='1.6' fill='%23b03a12'/%3E%3Crect x='6' y='20' width='16.5' height='4.5' rx='1.4' fill='%23f7f4ee' opacity='.55'/%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/style.css">
+<!-- LD:START --><script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "WebApplication",
+   "name": "손가락 마일리지",
+   "url": "",
+   "applicationCategory": "UtilityApplication",
+   "operatingSystem": "Any",
+   "browserRequirements": "JavaScript",
+   "description": "한국어 텍스트를 두벌식·세벌식 자판의 실제 타건열로 전개해 손가락 이동거리를 계산하는 도구",
+   "inLanguage": "ko",
+   "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "KRW"
+   }
+  },
+  {
+   "@type": "FAQPage",
+   "mainEntity": [
+    {
+     "@type": "Question",
+     "name": "이 계산이 실제 타자와 얼마나 같나요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "타건열 자체는 정확합니다. 어떤 글자를 어떤 키로 치는지는 자판 배열이 정하는 문제라 답이 하나뿐이고, 그 표는 libhangul 원본에서 기계로 뽑았습니다. 반면 이동거리는 모델입니다. 손가락이 키 중심까지 직선으로 간다고 보고, 손목·팔 움직임과 손가락 길이 차이는 계산에 넣지 않았습니다. 자판끼리 비교하는 용도로 보시고, 절대값을 실제 신체 이동으로 읽지는 마세요."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "제 카톡 파일이 서버로 올라가나요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "아니요. 이 사이트에는 서버가 없습니다. GitHub Pages가 HTML·CSS·JS 파일을 그대로 내려주고, 파일 읽기와 계산은 전부 브라우저 안에서 끝납니다. 업로드를 하는 코드 자체가 없어서, 하고 싶어도 못 합니다. 인터넷을 끊고 써 보셔도 똑같이 동작합니다."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "세벌식이 이동거리가 더 긴데, 왜 좋다고들 하나요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "이동거리는 여러 지표 중 하나일 뿐입니다. 세벌식은 타건 수·시프트·같은 손가락 연속에서 두벌식보다 유리하고, 대신 자모를 숫자행까지 펼쳐 놓아 거리에서 손해를 봅니다. 실제 타자 속도와 피로는 거리보다 '손가락이 꼬이는 횟수'에 더 좌우된다고 보는 사람이 많습니다. 어느 쪽을 중요하게 볼지는 표를 보고 직접 정하시면 됩니다."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "왜 영문·숫자·문장부호는 빼고 세나요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "세 자판 모두 영문·숫자는 한영 전환 뒤 같은 쿼티로 치기 때문에, 넣으면 세 배열에 똑같은 값이 더해져 차이를 흐리기만 합니다. 대신 제외한 글자 수를 화면에 그대로 적어 둡니다."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "ㅋㅋㅋ 같은 것도 계산되나요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "됩니다. 낱자로 쓴 ㅋㅋㅋ, ㅠㅠ, ㅇㅇ은 초성·중성으로 인식해 각각 한 번의 타건으로 셉니다. 같은 키를 연달아 누르는 건 이동거리 0이고, '같은 손가락 연속'에도 넣지 않습니다(타자 분석의 통상 관례입니다). 대신 연타 비율로 따로 셉니다."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "자판을 바꾸면 정말 덜 피곤한가요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "이 도구는 거기까지 답하지 못합니다. 여기서 재는 것은 기하학이고, 피로는 자세·키압·휴식·타자 습관이 훨씬 크게 좌우합니다. 다만 시프트 횟수나 같은 손가락 연속처럼 손에 직접 걸리는 동작의 횟수는 정확히 셀 수 있으니, 판단 재료로 쓰시라는 뜻으로 만들었습니다. 의학적 조언이 아닙니다."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "세벌식에서 ㅗ와 ㅜ가 두 자리에 있던데요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "맞습니다. 홑모음 ㅗ·ㅜ는 왼손 v·b 자리에서 치고, 겹모음(ㅘ ㅙ ㅚ ㅝ ㅞ ㅟ)의 앞자리로 쓸 때는 오른손 / ·9 자리를 씁니다. 그래야 뒤따르는 모음과 손이 갈립니다. 이 도구는 그 관행을 그대로 따라 계산합니다."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "내 배열도 넣어 볼 수 있나요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "네. 아래 '배열 편집기'에서 기존 자판을 복제해 키를 바꾸면 네 번째 열로 비교표에 들어갑니다. 만든 배열은 주소창 링크에 담기니 그대로 복사해 남에게 보낼 수 있습니다."
+     }
+    }
+   ]
+  }
+ ]
+}
+</script><!-- LD:END -->
 </head>
 <body>
 <a class="skip" href="#results">본문(결과)으로 건너뛰기</a>
@@ -63,8 +155,10 @@
           <textarea id="src" spellcheck="false" autocomplete="off"
             aria-describedby="srcStatus"></textarea>
           <p id="srcStatus" class="tiny" role="status"></p>
+          <div class="row-actions" id="presetRow">
+            <span class="tiny" style="align-self:center">예시:</span>
+          </div>
           <div class="row-actions">
-            <button class="btn" type="button" id="demoBtn">예시 문장 넣기</button>
             <button class="btn" type="button" id="clearBtn">비우기</button>
             <span class="badge" id="sourceBadge">예시 문장으로 보는 중</span>
           </div>
@@ -81,6 +175,22 @@
             파일은 <strong>브라우저 안에서만</strong> 읽습니다. 이 사이트에는 서버도, 업로드 기능도,
             분석 코드도 없습니다. 창을 닫으면 아무것도 남지 않습니다.
           </p>
+          <details>
+            <summary>카카오톡 대화 내보내는 법</summary>
+            <dl class="small" style="margin:.2rem 0 .6rem">
+              <dt style="font-weight:700;margin-top:.5rem">안드로이드</dt>
+              <dd style="margin:0 0 0 .2rem">대화방 → 오른쪽 위 <b>☰</b> → 설정(톱니) → <b>대화 내용 내보내기</b> →
+                <b>텍스트만 보내기</b> → 파일 앱 등으로 저장</dd>
+              <dt style="font-weight:700;margin-top:.5rem">아이폰</dt>
+              <dd style="margin:0 0 0 .2rem">대화방 → 오른쪽 위 <b>☰</b> → 설정(톱니) → <b>대화 내용 내보내기</b> →
+                <b>텍스트 메시지만 보내기</b> → <b>파일에 저장</b></dd>
+              <dt style="font-weight:700;margin-top:.5rem">PC (윈도우 · 맥)</dt>
+              <dd style="margin:0 0 0 .2rem">대화방 오른쪽 위 <b>⋮</b> → <b>대화 내용</b> → <b>내보내기</b> →
+                텍스트(.txt) 또는 CSV로 저장</dd>
+            </dl>
+            <p class="tiny">1년치 대화면 파일이 수십 MB일 수 있습니다. 그래도 그대로 넣으시면 됩니다 —
+              전부 이 브라우저 안에서 처리합니다.</p>
+          </details>
         </div>
       </div>
     </div>
@@ -148,6 +258,8 @@
   <section id="promoSection" hidden>
     <div class="wrap"><div id="promoSlot"></div></div>
   </section>
+
+  <div class="wrap" id="adSlotTop"></div>
 
   <!-- ─────────────────────────────────────────────── 공유 -->
   <section id="shareSection">
@@ -238,6 +350,8 @@
   <section id="method">
     <div class="wrap" id="methodBody"></div>
   </section>
+
+  <div class="wrap" id="adSlotBottom"></div>
 
 </main>
 

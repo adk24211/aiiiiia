@@ -2,7 +2,7 @@
  * 자판별 소개 페이지, 개인정보처리방침, sitemap, robots 를 만든다.
  * 자판 배열표와 지표는 실제 엔진으로 계산해 박아 넣으므로 본문과 도구가 어긋날 수 없다. */
 import { createRequire } from "node:module";
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,7 +10,15 @@ const require = createRequire(import.meta.url);
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 require("../assets/layouts.js");
 require("../assets/engine.js");
+require("../assets/content.js");
+require("../assets/config.js");
 const D = globalThis.KM_DATA, E = globalThis.KM_ENGINE;
+const C = globalThis.KM_CONTENT, CFG = globalThis.KM_CONFIG || {};
+
+/* siteUrl 을 채우면 canonical·og:image·sitemap 이 절대 주소가 된다.
+   비워 두면 상대 경로로 두고 sitemap 은 만들지 않는다 (가짜 주소를 넣지 않기 위해). */
+const SITE = (CFG.siteUrl || "").replace(/\/*$/, "");
+const abs = (path) => (SITE ? SITE + "/" + path : path);
 
 const DEMO =
   "안녕하세요 오늘 날씨가 참 좋네요 밖에 나가서 산책이라도 할까요 값싼 물건도 많이 샀어요\n" +
@@ -34,7 +42,7 @@ function shell({ title, desc, canonical, body, extraHead = "" }) {
 <meta property="og:type" content="article">
 <meta property="og:title" content="${esc(title)}">
 <meta property="og:description" content="${esc(desc)}">
-<meta property="og:image" content="og.png">
+<meta property="og:image" content="${esc(abs("og.png"))}">
 <meta property="og:locale" content="ko_KR">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="canonical" href="${esc(canonical)}">
@@ -178,8 +186,7 @@ const METRIC_ROWS = [
   ["좌우 손 비율", (r) => nf(r.leftPct, 0) + " : " + nf(r.rightPct, 0)]
 ];
 
-const SITE = "";
-let urls = ["./"];
+let urls = ["", ...Object.values(PAGES).map((p) => p.file)];
 
 for (const id of D.ORDER) {
   const L = D.LAYOUTS[id], meta = PAGES[id], r = byId[id];
@@ -227,8 +234,7 @@ for (const id of D.ORDER) {
 </div></section>`;
 
   writeFileSync(join(ROOT, meta.file),
-    shell({ title: meta.title, desc: meta.desc, canonical: SITE + meta.file, body }));
-  urls.push(meta.file);
+    shell({ title: meta.title, desc: meta.desc, canonical: abs(meta.file), body }));
   console.log("wrote", meta.file);
 }
 
@@ -281,17 +287,51 @@ const privacy = `
 writeFileSync(join(ROOT, "privacy.html"), shell({
   title: "개인정보처리방침 — 손가락 마일리지",
   desc: "손가락 마일리지는 서버가 없는 정적 사이트로, 이용자가 넣은 글과 파일을 외부로 전송하지 않습니다.",
-  canonical: SITE + "privacy.html",
+  canonical: abs("privacy.html"),
   body: privacy,
   extraHead: '\n<meta name="robots" content="index,follow">'
 }));
-urls.push("privacy.html");
 console.log("wrote privacy.html");
 
+/* --------------------------------------------- index.html 의 메타·JSON-LD */
+{
+  const ld = {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "WebApplication", name: "손가락 마일리지",
+        url: abs(""), applicationCategory: "UtilityApplication",
+        operatingSystem: "Any", browserRequirements: "JavaScript",
+        description: "한국어 텍스트를 두벌식·세벌식 자판의 실제 타건열로 전개해 손가락 이동거리를 계산하는 도구",
+        inLanguage: "ko",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "KRW" } },
+      { "@type": "FAQPage",
+        mainEntity: C.faq.map(([q, aTxt]) => ({
+          "@type": "Question", name: q,
+          acceptedAnswer: { "@type": "Answer", text: aTxt.replace(/<[^>]+>/g, "") }
+        })) }
+    ]
+  };
+  const tag = `<script type="application/ld+json">\n${JSON.stringify(ld, null, 1)}\n<\/script>`;
+  const idx = join(ROOT, "index.html");
+  let html = readFileSync(idx, "utf8");
+  html = html.replace(/<!-- LD:START -->[\s\S]*?<!-- LD:END -->/, `<!-- LD:START -->${tag}<!-- LD:END -->`);
+  html = html.replace(/<link rel="canonical" href="[^"]*">/, `<link rel="canonical" href="${esc(abs("index.html"))}">`);
+  html = html.replace(/<meta property="og:image" content="[^"]*">/, `<meta property="og:image" content="${esc(abs("og.png"))}">`);
+  writeFileSync(idx, html);
+  console.log("patched index.html (JSON-LD, canonical, og:image)");
+}
+
 /* ------------------------------------------------------------- sitemap */
-writeFileSync(join(ROOT, "sitemap.xml"),
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
-  urls.map((u) => `  <url><loc>${SITE || "https://example.invalid/"}${u === "./" ? "" : u}</loc></url>`).join("\n") +
-  `\n</urlset>\n`);
-writeFileSync(join(ROOT, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE || "https://example.invalid/"}sitemap.xml\n`);
-console.log("wrote sitemap.xml, robots.txt");
+if (SITE) {
+  writeFileSync(join(ROOT, "sitemap.xml"),
+    `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    urls.map((u) => `  <url><loc>${SITE}/${u}</loc></url>`).join("\n") + `\n</urlset>\n`);
+  writeFileSync(join(ROOT, "robots.txt"), `User-agent: *\nAllow: /\n\nSitemap: ${SITE}/sitemap.xml\n`);
+  console.log("wrote sitemap.xml, robots.txt");
+} else {
+  // 주소를 모르는 채로 가짜 sitemap 을 올리면 색인에 해가 된다.
+  writeFileSync(join(ROOT, "robots.txt"),
+    `User-agent: *\nAllow: /\n\n# assets/config.js 의 siteUrl 을 채우고 tools/build-pages.mjs 를 다시 돌리면\n# sitemap.xml 이 생성되고 이 파일에 주소가 들어갑니다.\n`);
+  try { unlinkSync(join(ROOT, "sitemap.xml")); } catch {}
+  console.log("siteUrl 이 비어 있어 sitemap 은 만들지 않았습니다 (robots.txt 만 갱신)");
+}
