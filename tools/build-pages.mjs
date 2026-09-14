@@ -213,7 +213,7 @@ for (const id of D.ORDER) {
 <section><div class="wrap">
   <h2>같은 글을 세 자판으로 쳐 보면</h2>
   <p class="small">아래는 한글 ${nf(a.text.syllables)}자짜리 예시문을 각 자판으로 쳤을 때의 값입니다.
-    키 간격 19.05㎜, 손가락 유지 모델 기준. <a href="./">내 글로 직접 계산해 볼 수 있습니다</a>.</p>
+    키 간격 19.05㎜, 기본(표준) 모형 기준. <a href="./">내 글로 직접 계산해 볼 수 있습니다</a>.</p>
   <div class="table-scroll"><table>
     <caption>예시문 ${nf(a.text.syllables)}자 기준 자판별 지표</caption>
     <thead><tr><th scope="col">지표</th>${D.ORDER.map((x) => `<th scope="col"${x === id ? ' style="color:var(--accent)"' : ""}>${esc(D.LAYOUTS[x].short)}</th>`).join("")}</tr></thead>

@@ -9,9 +9,9 @@
   --surface-2:  #f0ebe1;
   --ink:        #16161a;
   --ink-2:      #4a4a52;
-  --ink-3:      #6f6f79;
+  --ink-3:      #65656e;
   --line:       #ded7c9;
-  --line-2:     #c6bda9;
+  --line-2:     #8a857c;
   --accent:     #b03a12;   /* 주황빨강 — 강조 1색 */
   --accent-ink: #ffffff;
   --accent-bg:  #fbeadf;
@@ -38,7 +38,7 @@
     --ink-2:      #b9b6b0;
     --ink-3:      #918e89;
     --line:       #33333d;
-    --line-2:     #474753;
+    --line-2:     #71717f;
     --accent:     #ff8a5c;
     --accent-ink: #2a1004;
     --accent-bg:  #35201a;
@@ -47,17 +47,17 @@
     --good:       #62c6a3;
     --shadow:     0 1px 0 rgba(0,0,0,.4), 0 10px 30px -18px #000;
     --heat-s: 62%;
-    --tint-cho:  #16293b;
-    --tint-jung: #3b241a;
-    --tint-jong: #16302a;
+    --tint-cho:  #132435;
+    --tint-jung: #331e15;
+    --tint-jong: #122922;
   }
 }
 :root[data-theme="dark"] {
   --paper:#121216; --surface:#1a1a20; --surface-2:#24242c; --ink:#f2efe9; --ink-2:#b9b6b0;
-  --ink-3:#918e89; --line:#33333d; --line-2:#474753; --accent:#ff8a5c; --accent-ink:#2a1004;
+  --ink-3:#918e89; --line:#33333d; --line-2:#71717f; --accent:#ff8a5c; --accent-ink:#2a1004;
   --accent-bg:#35201a; --cool:#7fb8e8; --cool-bg:#172634; --good:#62c6a3;
   --shadow:0 1px 0 rgba(0,0,0,.4), 0 10px 30px -18px #000; --heat-s:62%;
-  --tint-cho:#16293b; --tint-jung:#3b241a; --tint-jong:#16302a;
+  --tint-cho:#132435; --tint-jung:#331e15; --tint-jong:#122922;
 }
 
 *, *::before, *::after { box-sizing: border-box; }

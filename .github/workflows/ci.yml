@@ -19,6 +19,8 @@ jobs:
         run: node tools/test-engine.mjs
       - name: 카카오톡 파서
         run: node tools/test-kakao.mjs
+      - name: 색 대비 (WCAG AA)
+        run: node tools/check-contrast.mjs
       - name: 생성 파일이 최신인지 확인
         run: |
           node tools/build-pages.mjs

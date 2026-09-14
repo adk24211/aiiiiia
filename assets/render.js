@@ -12,12 +12,14 @@
     source: "demo",              // demo | typed | kakao
     kakao: null,
     kakaoLabel: "",
-    opts: { model: "keep", unit: 19.05, geometry: "ansi" },
+    opts: { model: "kla", unit: 19.05, geometry: "ansi" },
     custom: null,                // { baseId, swaps: [[a,b], ...] }
     last: null
   };
 
   /* ----------------------------------------------------------- 유틸 */
+
+  var MODEL_KO = { kla: "표준", keep: "손가락 유지", home: "매번 홈 복귀" };
 
   function esc(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
@@ -125,7 +127,13 @@
 
   /* ------------------------------------------------------- 계산 실행 */
 
+  var MAX_CHARS = 1500000;      // 이 이상은 메모리·시간 모두 위험하다
   function compute() {
+    S.truncated = 0;
+    if (S.text.length > MAX_CHARS) {
+      S.truncated = S.text.length;
+      S.text = S.text.slice(0, MAX_CHARS);
+    }
     S.last = E.analyze(S.text, {
       layouts: layoutList(), model: S.opts.model,
       unit: S.opts.unit, geometry: S.opts.geometry
@@ -162,6 +170,7 @@
       "시프트 " + nf(base.shifts) + "회"
     ];
     if (a.text.skipped) chips.push("계산 제외 " + nf(a.text.skipped) + "자");
+    if (S.truncated) chips.push("너무 길어 앞 " + nf(MAX_CHARS) + "자만 계산 (전체 " + nf(S.truncated) + "자)");
     if (S.kakaoLabel) chips.unshift(S.kakaoLabel);
     $("#chips").innerHTML = chips.map(function (c, i) {
       return '<span class="badge' + (i === 0 && S.kakaoLabel ? " badge-live" : "") + '">' + esc(c) + "</span>";
@@ -186,7 +195,7 @@
     var rs = a.results;
     $("#compareCaption").textContent =
       "한글 " + nf(a.text.syllables) + "자를 각 자판으로 쳤을 때의 지표 " + METRICS.length + "가지" +
-      " (키 간격 " + S.opts.unit + "㎜, " + (S.opts.model === "keep" ? "손가락 유지" : "홈 복귀") + " 모델)";
+      " (키 간격 " + S.opts.unit + "㎜, " + MODEL_KO[a.options.model] + " 모형)";
     $("#compareHead").innerHTML = '<th scope="col">지표</th>' + rs.map(function (r) {
       return '<th scope="col">' + esc(r.layout.short) + "</th>";
     }).join("");
@@ -225,13 +234,23 @@
 
   var UPX = 20, PAD = 3;
 
-  function heatColor(t) {
-    if (isDark()) {
-      var Ld = 16 + 46 * Math.pow(t, 0.6);
-      return { fill: "hsl(205 62% " + Ld.toFixed(1) + "%)", ink: Ld < 44 ? "#e8eef4" : "#0d1319" };
+  /* 순차 색 스케일.
+     파랑 한 색으로 가되, 글자 대비가 4.5:1 아래로 떨어지는 중간 명도 구간을 건너뛴다.
+     t <= 0.62 구간은 어두운 글자, 그 위는 흰 글자를 쓰고, 두 구간 사이에서 명도를 점프시킨다.
+     이렇게 하면 어느 칸에서도 숫자가 4.7:1 이상으로 읽힌다. (계산: tools/check-contrast.mjs) */
+  var HEAT_SPLIT = 0.62;
+  function heatColor(t, forceLight) {
+    if (t < 0) t = 0; else if (t > 1) t = 1;
+    if (!forceLight && isDark()) {
+      var Ld = t <= HEAT_SPLIT
+        ? 15 + 22 * Math.pow(t / HEAT_SPLIT, 0.75)
+        : 47 + 19 * ((t - HEAT_SPLIT) / (1 - HEAT_SPLIT));
+      return { fill: "hsl(205 62% " + Ld.toFixed(1) + "%)", ink: t <= HEAT_SPLIT ? "#eaf0f6" : "#0a0f14" };
     }
-    var L = 96 - 56 * Math.pow(t, 0.6);
-    return { fill: "hsl(205 72% " + L.toFixed(1) + "%)", ink: L < 58 ? "#ffffff" : "#10161c" };
+    var L = t <= HEAT_SPLIT
+      ? 96 - 46 * Math.pow(t / HEAT_SPLIT, 0.75)
+      : 42 - 12 * ((t - HEAT_SPLIT) / (1 - HEAT_SPLIT));
+    return { fill: "hsl(205 72% " + L.toFixed(1) + "%)", ink: t <= HEAT_SPLIT ? "#0d1218" : "#ffffff" };
   }
 
   function heatSvg(L, res, idBase) {
@@ -503,10 +522,13 @@
       }).join("") + "</ul></div>";
   }
 
+  var unlockState = null;
   function renderUnlock() {
     var slot = $("#unlockSlot");
-    if (!CFG.unlockUrl) { slot.innerHTML = ""; return; }
+    if (!CFG.unlockUrl) { if (unlockState !== "off") { slot.innerHTML = ""; unlockState = "off"; } return; }
     var open = store("km.unlock") === "1";
+    if (unlockState === String(open)) return;      // 입력 중인 코드를 지우지 않는다
+    unlockState = String(open);
     slot.innerHTML = '<div class="promo" style="margin-top:1rem"><h3 style="margin:0">고해상도 포스터 (' +
       esc(CFG.unlockPrice || "") + ")</h3>" +
       "<p class=\"small\">A3 300dpi 포스터 PNG, 키별·손가락별 전체 CSV, 키캡 각인용 치트시트를 받습니다.</p>" +
@@ -643,15 +665,15 @@
         for (var j = 0; j < row.keys.length; j++) {
           var key = row.keys.charAt(j), code = key.charCodeAt(0);
           var cnt = res.keyCount[code] || 0, t = cnt / maxc;
-          var L0 = 96 - 56 * Math.pow(t, 0.6);
+          var hc = heatColor(t, true);
           var x = kbX + (row.xoff + j) * ku, ky = top + ri * ku;
-          g.fillStyle = cnt ? "hsl(205 72% " + L0.toFixed(1) + "%)" : "#fffdf9";
+          g.fillStyle = cnt ? hc.fill : "#fffdf9";
           g.strokeStyle = "#ded7c9"; g.lineWidth = Math.max(1, 2 * k);
           g.beginPath();
           if (g.roundRect) g.roundRect(x + ku * .03, ky + ku * .03, ku * .94, ku * .94, ku * .1);
           else g.rect(x + ku * .03, ky + ku * .03, ku * .94, ku * .94);
           g.fill(); g.stroke();
-          var ink = cnt && L0 < 58 ? "#ffffff" : "#10161c";
+          var ink = cnt ? hc.ink : "#10161c";
           var lab = info[key];
           g.textAlign = "center";
           if (lab) {
@@ -699,8 +721,8 @@
 
     /* ── 꼬리 ── */
     g.fillStyle = "#8a8780"; g.font = "400 " + px(44) + FONT;
-    g.fillText("자판 데이터: libhangul · 키 간격 " + S.opts.unit + "㎜ · " +
-      (S.opts.model === "keep" ? "손가락 유지 모델" : "홈 복귀 모델"), M, H - M * .55);
+    g.fillText("자판 데이터: libhangul · 키 간격 " + a.options.unit + "㎜ · " +
+      MODEL_KO[a.options.model] + " 모형", M, H - M * .55);
     g.textAlign = "right"; g.fillStyle = "#16161a"; g.font = "700 " + px(50) + FONT;
     g.fillText(CFG.siteUrl ? CFG.siteUrl.replace(/^https?:\/\//, "") : "손가락 마일리지", W - M, H - M * .55);
     g.textAlign = "left";

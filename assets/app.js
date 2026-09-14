@@ -36,6 +36,7 @@
     if (!src.value.trim()) S.text = DEMO_TEXT();
     S.kakaoLabel = ""; S.kakao = null;
     $("#kakaoPanel").hidden = true;
+    busy();
     A.renderSoon(260);
     writeHash();
   });
@@ -155,10 +156,20 @@
 
   document.addEventListener("change", function (e) {
     var t = e.target;
-    if (t.name === "model") { S.opts.model = t.value; A.render(); }
-    else if (t.name === "pitch") { S.opts.unit = parseFloat(t.value); A.render(); }
-    else if (t.name === "geom") { S.opts.geometry = t.value; A.render(); }
+    if (t.name === "model") S.opts.model = t.value;
+    else if (t.name === "pitch") S.opts.unit = parseFloat(t.value);
+    else if (t.name === "geom") S.opts.geometry = t.value;
+    else return;
+    busy();
+    A.renderSoon(20);
   });
+
+  /* 긴 글은 계산이 수백 ms 걸린다. 멈춘 것처럼 보이지 않게 먼저 알린다. */
+  function busy() {
+    if (S.text.length < 40000) return;
+    var el = $("#srcStatus");
+    if (el) el.textContent = "계산 중… (" + A.nf(S.text.length) + "자)";
+  }
 
   /* -------------------------------------------------------- 편집기 */
 
@@ -259,7 +270,9 @@
   });
 
   /* 두 키를 바꿔 이동거리가 얼마나 주는지 전수 탐색 (표본 8천 자, 청크 처리) */
+  var optRunning = false;
   function runOptimizer() {
+    if (optRunning) return;
     var baseId = $("#editorBase").value, L = D.LAYOUTS[baseId];
     var text = S.text.length > 8000 ? S.text.slice(0, 8000) : S.text;
     var dec = E.decompose(text);
@@ -277,17 +290,23 @@
       "가지 교환을 시험하는 중… 0%</p><progress id=\"optBar\" max=\"" + pairs.length + "\" value=\"0\"></progress>";
 
     var results = [], idx = 0, CH = 60;
+    optRunning = true;
+    $("#autoFind").disabled = true;
+    function stop() { optRunning = false; var b = $("#autoFind"); if (b) b.disabled = false; }
     function step() {
+      var prog = $("#optProg"), bar = $("#optBar");
+      if (!prog || !bar) { stop(); return; }      // 그 사이에 편집기가 다시 그려졌다
       var end = Math.min(pairs.length, idx + CH);
       for (; idx < end; idx++) {
         var swapped = swapLayout(L, [pairs[idx]]);
         var mm = E.measure(E.compile(swapped), dec, opt).mm;
         if (mm < baseMM) results.push({ pair: pairs[idx], mm: mm, gain: (baseMM - mm) / baseMM * 100 });
       }
-      $("#optBar").value = idx;
-      $("#optProg").textContent = nf(pairs.length) + "가지 교환을 시험하는 중… " +
+      bar.value = idx;
+      prog.textContent = nf(pairs.length) + "가지 교환을 시험하는 중… " +
         nf(idx / pairs.length * 100, 0) + "%";
       if (idx < pairs.length) { requestAnimationFrame(step); return; }
+      stop();
       results.sort(function (a, b) { return b.gain - a.gain; });
       showOptimizer(results.slice(0, 5), pairs.length, L, text.length);
     }
@@ -386,7 +405,10 @@
     var q = {};
     h.split("&").forEach(function (kv) {
       var i = kv.indexOf("=");
-      if (i > 0) q[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
+      if (i <= 0) return;
+      // 남이 보낸 링크는 깨져 있을 수 있다. 여기서 던지면 페이지가 통째로 안 뜬다.
+      try { q[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1)); }
+      catch (e) { /* 못 읽는 항목은 무시 */ }
     });
     var used = false;
     if (q.t) { S.text = q.t; S.source = "typed"; src.value = q.t; used = true; }
@@ -558,7 +580,10 @@
     if (!document.documentElement.getAttribute("data-theme")) A.render();
   });
 
-  if (!readHash()) src.value = S.text;      // 빈 상태 금지 — 무엇을 재고 있는지 바로 보이게
+  function readHashInit() {
+    if (!readHash()) src.value = S.text;    // 빈 상태 금지 — 무엇을 재고 있는지 바로 보이게
+  }
+  try { readHashInit(); } catch (e) { /* 링크가 깨져도 도구는 떠야 한다 */ }
   renderLongform();
   buildEditor();
   A.render();

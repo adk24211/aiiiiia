@@ -30,6 +30,7 @@ jobs:
           node tools/verify-layouts.mjs
           node tools/test-engine.mjs
           node tools/test-kakao.mjs
+          node tools/check-contrast.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

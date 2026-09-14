@@ -43,7 +43,15 @@
      "name": "이 계산이 실제 타자와 얼마나 같나요?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "타건열 자체는 정확합니다. 어떤 글자를 어떤 키로 치는지는 자판 배열이 정하는 문제라 답이 하나뿐이고, 그 표는 libhangul 원본에서 기계로 뽑았습니다. 반면 이동거리는 모델입니다. 손가락이 키 중심까지 직선으로 간다고 보고, 손목·팔 움직임과 손가락 길이 차이는 계산에 넣지 않았습니다. 자판끼리 비교하는 용도로 보시고, 절대값을 실제 신체 이동으로 읽지는 마세요."
+      "text": "타건열 자체는 정확합니다. 어떤 글자를 어떤 키로 치는지는 자판 배열이 정하는 문제라 답이 하나뿐이고, 그 표는 libhangul 원본에서 기계로 뽑았습니다. 반면 이동거리는 모형입니다. 손가락이 키 중심까지 직선으로 간다고 보고, 손목·팔 움직임과 손가락 길이 차이는 넣지 않았습니다. 모형을 바꾸면 절대값이 30~60%씩 달라지므로(설정에서 직접 바꿔 보세요), 자판끼리 비교하는 용도로 보시고 절대값을 실제 신체 이동으로 읽지는 마세요."
+     }
+    },
+    {
+     "@type": "Question",
+     "name": "기본 계산 방식이 왜 '표준'인가요?",
+     "acceptedAnswer": {
+      "@type": "Answer",
+      "text": "세 가지 중 기본값은 한 손가락이 키로 가는 동안 나머지 손가락은 홈으로 돌아온다고 보는 방식입니다. 영문 자판을 비교할 때 널리 쓰이는 규칙과 같아서 '표준'이라 불렀습니다. 나머지 두 모형도 그대로 쓸 수 있습니다. 다만 손가락 유지 모형은 같은 키를 반복하면 거리가 0이라, ㅋㅋㅋ가 많은 카톡 대화에서는 백 번을 쳐도 스무 번과 같은 값이 나옵니다. 그 성질을 알고 쓰셔야 합니다."
      }
     },
     {
@@ -286,10 +294,14 @@
         <fieldset>
           <legend>이동거리 모델</legend>
           <div class="radio-row">
-            <label><input type="radio" name="model" value="keep" checked>
-              <span>손가락 유지 <span class="tiny">— 친 자리에 손가락이 머문다 (실제에 가까움)</span></span></label>
+            <label><input type="radio" name="model" value="kla" checked>
+              <span>표준 <span class="tiny">— 한 손가락이 키로 가는 동안 나머지 손가락은 홈으로 돌아온다.
+                자판 분석에서 널리 쓰는 방식</span></span></label>
+            <label><input type="radio" name="model" value="keep">
+              <span>손가락 유지 <span class="tiny">— 친 자리에 그대로 머문다. 좌우 이동만 재므로
+                ㅋㅋㅋ 같은 반복이 많으면 거리가 0에 가까워진다</span></span></label>
             <label><input type="radio" name="model" value="home">
-              <span>홈 복귀 <span class="tiny">— 칠 때마다 제자리로 돌아온다 (엄격한 교본식)</span></span></label>
+              <span>매번 홈 복귀 <span class="tiny">— 타건마다 홈에서 왕복한다. 가장 엄격한 교본식</span></span></label>
           </div>
         </fieldset>
         <fieldset>

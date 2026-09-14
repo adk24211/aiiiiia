@@ -23,19 +23,22 @@
     ["쌌", "dubeol", "TkT"],   ["쌌", "sfinal", "nnf2"]
   ];
 
-  /* B. 지표 — 손으로 계산해 검증한 값 (키 간격 19.05㎜, 손가락 유지 모델) */
+  /* B. 지표 — 기본 모형(kla), 키 간격 19.05㎜.
+     "한" = gks 는 손으로 계산해 검증: LI f→g 1.0u, 되돌아오기 1.0u, 나머지 0 → 2.000u = 38.10㎜ */
   var METRICS = [
-    ["한글 자판 실험", "dubeol", { totalStrokes: 19, mm: 253.6, shifts: 0 }],
-    ["한글 자판 실험", "s390",   { totalStrokes: 19, mm: 221.2, shifts: 0 }],
-    ["한글 자판 실험", "sfinal", { totalStrokes: 19, mm: 221.2, shifts: 0 }],
-    [DEMO, "dubeol", { totalStrokes: 218, mm: 2710.2, shifts: 10, sfbPct: 3.23, altPct: 78.1, homePct: 53.3, numRowPct: 0.0 }],
-    [DEMO, "s390",   { totalStrokes: 213, mm: 3603.3, shifts: 4,  sfbPct: 1.28, altPct: 71.2, homePct: 42.1, numRowPct: 9.8 }],
-    [DEMO, "sfinal", { totalStrokes: 213, mm: 3651.6, shifts: 5,  sfbPct: 1.29, altPct: 71.6, homePct: 41.8, numRowPct: 10.4 }]
+    ["한", "dubeol", { totalStrokes: 3, mm: 38.1, shifts: 0 }],
+    ["한글 자판 실험", "dubeol", { totalStrokes: 19, mm: 287.6, shifts: 0 }],
+    ["한글 자판 실험", "s390",   { totalStrokes: 19, mm: 373.9, shifts: 0 }],
+    ["한글 자판 실험", "sfinal", { totalStrokes: 19, mm: 373.9, shifts: 0 }],
+    [DEMO, "dubeol", { totalStrokes: 218, mm: 4461.8, shifts: 10, sfbPct: 1.82, altPct: 78.2, homePct: 53.3, numRowPct: 0.0 }],
+    [DEMO, "s390",   { totalStrokes: 213, mm: 5288.2, shifts: 4,  sfbPct: 1.25, altPct: 74.4, homePct: 42.1, numRowPct: 9.8 }],
+    [DEMO, "sfinal", { totalStrokes: 213, mm: 5428.5, shifts: 5,  sfbPct: 1.25, altPct: 75.6, homePct: 41.8, numRowPct: 10.4 }]
   ];
 
   function one(layout, text, opt) {
-    return E.analyze(text, { layouts: [L(layout)], model: (opt && opt.model) || "keep",
-                             unit: (opt && opt.unit) || 19.05 }).results[0];
+    var o = { layouts: [L(layout)], unit: (opt && opt.unit) || 19.05 };
+    if (opt && opt.model) o.model = opt.model;      // 지정하지 않으면 기본 모형을 쓴다
+    return E.analyze(text, o).results[0];
   }
 
   function run() {
@@ -99,14 +102,33 @@
     inv("스마트폰 기하 · 유한한 거리", "true", String(isFinite(mob.mm) && mob.mm > 0));
 
     var half = E.analyze(DEMO, { unit: 9.525 }).results[0].mm;
-    inv("키 간격 절반 → 거리 절반", (2710.2 / 2).toFixed(1), half.toFixed(1));
+    inv("키 간격 절반 → 거리 절반", (4461.8 / 2).toFixed(1), half.toFixed(1));
 
-    var home = one("dubeol", "한글 자판 실험", { model: "home" });
-    inv("홈 복귀 모델이 더 멀거나 같다", "true", String(home.mm >= 253.6));
+    var home = one("dubeol", DEMO, { model: "home" });
+    inv("홈 복귀 모형이 기본보다 멀거나 같다", "true", String(home.mm >= 4461.8));
 
     var kk = one("dubeol", "ㅋㅋㅋㅋ");
     inv("같은 키 연타 · SFB 0%", 0, Math.round(kk.sfbPct));
     inv("같은 키 연타 · 연타 100%", 100, Math.round(kk.repeatPct));
+
+    // 기본 모형은 글이 길어지면 거리도 길어져야 한다 (예전 keep 모형은 여기서 포화됐다)
+    var s10 = one("dubeol", "세".repeat(10)).mm, s30 = one("dubeol", "세".repeat(30)).mm;
+    inv("반복이 많은 글도 거리가 늘어난다", (s10 * 3).toFixed(0), s30.toFixed(0));
+    var keep30 = one("dubeol", "세".repeat(30), { model: "keep" }).mm;
+    inv("손가락 유지 모형은 반복에서 포화된다(의도된 성질)", "true",
+        String(keep30 < one("dubeol", "세".repeat(10), { model: "keep" }).mm * 1.01));
+
+    // 시프트는 누르고 있는다 — 연속 시프트를 매번 새로 누르지 않는다
+    inv("ㅆㅆㅆ · 시프트 1회", 1, one("dubeol", "ㅆㅆㅆ").shifts);
+    inv("있따 · 연속 시프트 1회", 1, one("dubeol", "있따").shifts);
+    // 시프트도 손가락을 쓰므로 같은 손가락 연속에 잡혀야 한다 (두벌식 ㅔ=p, ㅃ=shift+q → 오른새끼 연속)
+    inv("시프트가 만드는 같은 손가락 연속을 잡는다", "true", String(one("dubeol", "ㅔㅃ").sfb === 1));
+
+    // analyze()가 돌려주는 옵션은 실제로 쓴 값이어야 한다
+    inv("잘못된 옵션은 기본값으로 보고", "19.05|kla|ansi",
+        [E.analyze("가", { unit: -5, model: "HOME", geometry: "MOBILE" }).options.unit,
+         E.analyze("가", { unit: -5, model: "HOME", geometry: "MOBILE" }).options.model,
+         E.analyze("가", { unit: -5, model: "HOME", geometry: "MOBILE" }).options.geometry].join("|"));
 
     var pass = 0, fail = 0;
     rows.forEach(function (r) { if (r.ok) pass++; else fail++; });

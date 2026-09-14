@@ -185,11 +185,24 @@
 
   /* ------------------------------------------------------------- 측정 */
 
+  /* 이동거리 모델 세 가지.
+   *
+   *  kla  (기본)  한 손가락이 키로 가는 동안, 이번에 쓰지 않는 손가락들은 홈으로 돌아온다.
+   *               영문 자판 분석에서 널리 쓰이는 방식(patorjk/stevep99 keyboard-layout-analyzer)과
+   *               같은 규칙이다. 같은 키를 연달아 치면 그 손가락은 제자리에 있으므로 추가 거리가
+   *               붙지 않고, 손을 옮겨 다니면 되돌아오는 거리까지 계산된다.
+   *  keep         친 자리에 손가락이 계속 머문다. 순수한 좌우 이동만 잰다. 같은 키 반복은 0이라
+   *               ㅋㅋㅋ 같은 글에서 거리가 포화된다(장점이자 함정).
+   *  home         타건마다 홈에서 왕복한다. 가장 엄격한 교본식.
+   *
+   * 시프트는 셋 모두에서 "누르고 있는" 것으로 본다 — 연속으로 시프트가 필요한 글자를 칠 때
+   * 새끼손가락이 매번 왕복하지 않는다. 실제 타자가 그렇다.
+   */
   function measure(compiled, dec, opt) {
     opt = opt || {};
     var g = GEOM[opt.geometry === "mobile" ? "mobile" : "ansi"];
     var unit = typeof opt.unit === "number" && opt.unit > 0 ? opt.unit : U_DEFAULT;
-    var homeReturn = opt.model === "home";
+    var model = opt.model === "home" ? "home" : opt.model === "keep" ? "keep" : "kla";
 
     var cx = new Float64Array(8), cy = new Float64Array(8);
     for (var i = 0; i < 8; i++) { cx[i] = g.homeX[i]; cy[i] = g.homeY[i]; }
@@ -198,60 +211,86 @@
     var dist = 0, keyStrokes = 0, spaces = 0, shifts = 0, unmapped = 0, shiftL = 0, shiftR = 0;
     var bigrams = 0, sfb = 0, alt = 0, repeats = 0, homeHits = 0;
     var prevFinger = -1, prevBase = -1;
+    var heldShift = -1;                       // 지금 시프트를 누르고 있는 손가락 (-1 = 안 누름)
+
+    function goTo(f, x, y) {                  // 손가락 f 를 (x,y)로. 이동한 거리를 돌려준다.
+      var dx = cx[f] - x, dy = cy[f] - y;
+      cx[f] = x; cy[f] = y;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+    function homeExcept(a, b) {               // kla: 이번에 안 쓰는 손가락을 홈으로
+      for (var q = 0; q < 8; q++) {
+        if (q === a || q === b) continue;
+        if (cx[q] !== g.homeX[q] || cy[q] !== g.homeY[q]) dist += goTo(q, g.homeX[q], g.homeY[q]);
+      }
+    }
+    function chain(f, baseId) {               // 바이그램 사슬에 한 타건을 넣는다
+      if (prevFinger >= 0) {
+        bigrams++;
+        if (prevBase === baseId) repeats++;
+        else if (prevFinger === f) sfb++;
+        if ((prevFinger < 4) !== (f < 4)) alt++;
+      }
+      prevFinger = f; prevBase = baseId;
+    }
 
     var toks = dec.tokens, N = dec.length;
     var cho = compiled.cho, jung = compiled.jung, jong = compiled.jong;
 
     for (var t = 0; t < N; t++) {
       var v = toks[t];
-      if (v === SPACE) { spaces++; prevFinger = -1; continue; }
+      if (v === SPACE) {
+        // 스페이스는 엄지가 친다 — 이동거리 0. kla에서는 이때 나머지 손가락이 홈으로 돌아온다.
+        if (model === "kla") homeExcept(-1, -1);
+        heldShift = -1;
+        spaces++; prevFinger = -1; prevBase = -1;
+        continue;
+      }
       var keys = v >= T_JONG ? jong[v - T_JONG] : v >= T_JUNG ? jung[v - T_JUNG] : cho[v];
       for (var k = 0; k < keys.length; k++) {
         var code = keys.charCodeAt(k);
-        if (code === 63) { unmapped++; prevFinger = -1; continue; }   // '?'
+        if (code === 63) { unmapped++; prevFinger = -1; prevBase = -1; heldShift = -1; continue; }   // '?'
         var sb = g.shiftBase[code];
         var shifted = sb >= 0;
         var base = shifted ? sb : code;
         var f = g.finger[base];
-        if (f < 0) { unmapped++; prevFinger = -1; continue; }
+        if (f < 0) { unmapped++; prevFinger = -1; prevBase = -1; heldShift = -1; continue; }
 
+        var sf = -1, si = 0;
+        if (shifted) { sf = f < 4 ? 7 : 0; si = f < 4 ? 1 : 0; }   // 반대손 새끼로 시프트
+
+        if (model === "kla") homeExcept(f, sf);
+
+        /* ── 시프트 (새로 누를 때만) ── */
+        if (shifted && heldShift !== sf) {
+          if (model === "home") {
+            var hsx = g.homeX[sf] - g.shiftX[si], hsy = g.homeY[sf] - g.shiftY[si];
+            dist += 2 * Math.sqrt(hsx * hsx + hsy * hsy);
+          } else {
+            dist += goTo(sf, g.shiftX[si], g.shiftY[si]);
+          }
+          shifts++; fingerLoad[sf]++;
+          if (si) shiftR++; else shiftL++;
+          chain(sf, -2 - si);                 // 시프트도 손가락을 쓰는 타건이다
+          heldShift = sf;
+        } else if (!shifted) {
+          heldShift = -1;                     // 시프트를 뗀다
+        }
+
+        /* ── 글쇠 ── */
         var px = g.x[base], py = g.y[base];
-        if (homeReturn) {
+        if (model === "home") {
           var hdx = g.homeX[f] - px, hdy = g.homeY[f] - py;
           dist += 2 * Math.sqrt(hdx * hdx + hdy * hdy);
         } else {
-          var dx = cx[f] - px, dy = cy[f] - py;
-          dist += Math.sqrt(dx * dx + dy * dy);
-          cx[f] = px; cy[f] = py;
+          dist += goTo(f, px, py);
         }
         keyStrokes++; keyCount[base]++; fingerLoad[f]++; rowCount[g.row[base] + 1]++;
         if (HOME_KEYS.charCodeAt(f) === base) homeHits++;
-
-        if (shifted) {
-          shifts++;
-          var sf = f < 4 ? 7 : 0;                       // 반대손 새끼로 시프트
-          var si = f < 4 ? 1 : 0;
-          if (si) shiftR++; else shiftL++;
-          if (homeReturn) {
-            var shx = g.homeX[sf] - g.shiftX[si], shy = g.homeY[sf] - g.shiftY[si];
-            dist += 2 * Math.sqrt(shx * shx + shy * shy);
-          } else {
-            var sdx = cx[sf] - g.shiftX[si], sdy = cy[sf] - g.shiftY[si];
-            dist += Math.sqrt(sdx * sdx + sdy * sdy);
-            cx[sf] = g.shiftX[si]; cy[sf] = g.shiftY[si];
-          }
-          fingerLoad[sf]++;
-        }
-
-        if (prevFinger >= 0) {
-          bigrams++;
-          if (prevBase === base) repeats++;
-          else if (prevFinger === f) sfb++;
-          if ((prevFinger < 4) !== (f < 4)) alt++;
-        }
-        prevFinger = f; prevBase = base;
+        chain(f, base);
       }
     }
+    if (model === "kla") homeExcept(-1, -1);  // 다 치고 나면 손을 제자리로
 
     var d1 = Math.max(1, bigrams), d2 = Math.max(1, keyStrokes);
     var left = 0; for (i = 0; i < 4; i++) left += fingerLoad[i];
@@ -264,6 +303,7 @@
 
     return {
       layout: compiled.layout,
+      model: model, unit: unit, geometry: g.kind,
       mm: dist * unit,
       units: dist,
       keyStrokes: keyStrokes, spaces: spaces, shifts: shifts,
@@ -300,10 +340,14 @@
     opt = opt || {};
     var layouts = opt.layouts || D.ORDER.map(function (id) { return D.LAYOUTS[id]; });
     var dec = decompose(text);
+    var results = layouts.map(function (L) { return measure(compiledFor(L), dec, opt); });
     return {
       text: { syllables: dec.syllables, jamoChars: dec.jamoChars, skipped: dec.skipped, jamoTokens: dec.length },
-      results: layouts.map(function (L) { return measure(compiledFor(L), dec, opt); }),
-      options: { unit: opt.unit || U_DEFAULT, model: opt.model || "keep", geometry: opt.geometry || "ansi" }
+      results: results,
+      // 실제로 계산에 쓰인 값 (요청값이 아니라). 화면 라벨과 계산이 어긋나지 않게 한다.
+      options: results.length
+        ? { unit: results[0].unit, model: results[0].model, geometry: results[0].geometry }
+        : { unit: U_DEFAULT, model: "kla", geometry: "ansi" }
     };
   }
 
