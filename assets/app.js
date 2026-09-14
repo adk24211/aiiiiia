@@ -561,24 +561,58 @@
     });
   }
 
+  /* 유료 언락 산출물: 요약 + 키별 + 손가락별 세 구역을 담은 CSV.
+     엑셀에서 바로 열리도록 BOM 과 CRLF 를 쓴다. */
   function downloadCsv() {
     var a = S.last; if (!a) return;
-    var rows = [["자판", "키", "자모", "손가락", "줄", "타건수"]];
-    a.results.forEach(function (r) {
-      for (var c = 0; c < 128; c++) if (r.keyCount[c]) {
-        var ch = String.fromCharCode(c);
-        rows.push([r.layout.name, ch, "", E.FINGER_KO[E.GEOM.ansi.finger[c]] || "",
-                   E.ROW_KO[E.GEOM.ansi.row[c]] || "", r.keyCount[c]]);
-      }
+    var g = E.GEOM.ansi;
+    var rows = [];
+    var push = function () { rows.push(Array.prototype.slice.call(arguments)); };
+
+    push("손가락 마일리지 분석");
+    push("계산 조건", "키 간격 " + a.options.unit + "mm",
+         "모형 " + ({ kla: "표준", keep: "손가락 유지", home: "매번 홈 복귀" }[a.options.model]),
+         "세벌식 겹모음 " + (a.options.leadStyle ? "오른손 자리" : "항상 왼손 자리"));
+    push("입력", "한글 " + a.text.syllables + "자", "계산 제외 " + a.text.skipped + "자",
+         S.kakaoLabel || (S.source === "demo" ? "예시 문장" : "직접 넣은 글"));
+    push("");
+
+    push("[요약] 자판별 지표");
+    push.apply(null, ["지표"].concat(a.results.map(function (r) { return r.layout.name; })));
+    A.METRICS.forEach(function (m) {
+      push.apply(null, [C.metrics[m.k][0]].concat(a.results.map(function (r) { return m.fmt(r); })));
     });
-    var csv = "﻿" + rows.map(function (r) {
+    push("");
+
+    push("[손가락] 손가락별 타건 수와 비율");
+    push.apply(null, ["손가락"].concat(a.results.map(function (r) { return r.layout.name; })));
+    E.FINGER_KO.forEach(function (name, f) {
+      push.apply(null, [name].concat(a.results.map(function (r) {
+        return r.fingerLoad[f] + "회 (" + r.fingerPct[f].toFixed(1) + "%)";
+      })));
+    });
+    push("");
+
+    push("[키별] 자판 · 키 · 자모 · 손가락 · 줄 · 타건 수");
+    push("자판", "키", "자모(기본)", "자모(시프트)", "손가락", "줄", "타건 수");
+    a.results.forEach(function (r) {
+      var info = A.keyLabels(r.layout);
+      var list = [];
+      for (var c = 0; c < 128; c++) if (r.keyCount[c]) list.push(c);
+      list.sort(function (x, y) { return r.keyCount[y] - r.keyCount[x]; });
+      list.forEach(function (c) {
+        var ch = String.fromCharCode(c), lab = info[ch] || { base: [], shift: [] };
+        push(r.layout.name, ch, lab.base.join(" "), lab.shift.join(" "),
+             E.FINGER_KO[g.finger[c]] || "", E.ROW_KO[g.row[c]] || "", r.keyCount[c]);
+      });
+    });
+
+    var csv = "\ufeff" + rows.map(function (r) {
       return r.map(function (v) { return '"' + String(v).replace(/"/g, '""') + '"'; }).join(",");
     }).join("\r\n");
-    var blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    var url = URL.createObjectURL(blob), el = document.createElement("a");
-    el.href = url; el.download = "손가락-마일리지.csv";
-    document.body.appendChild(el); el.click(); el.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+    saveBlob(new Blob([csv], { type: "text/csv;charset=utf-8" }), "손가락-마일리지.csv");
+    var out = document.getElementById("unlockMsg");
+    if (out) out.textContent = "CSV를 저장했습니다 (요약 · 손가락별 · 키별).";
   }
 
   /* ---------------------------------------------------------- 시작 */

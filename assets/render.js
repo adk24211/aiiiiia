@@ -732,6 +732,7 @@
     return true;
   }
 
-  window.KM_APP = { S: S, render: render, J: J, layoutSheetSvg: layoutSheetSvg, drawPoster: drawPoster,
+  window.KM_APP = { S: S, render: render, J: J, keyLabels: keyLabels, METRICS: METRICS,
+                    layoutSheetSvg: layoutSheetSvg, drawPoster: drawPoster,
                     layoutList: layoutList, renderSoon: renderSoon, dist: dist, distStr: distStr, nf: nf, esc: esc, store: store };
 })();
