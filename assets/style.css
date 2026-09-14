@@ -242,6 +242,8 @@ tbody tr:hover { background: var(--surface); }
 td.best { color: var(--good); font-weight: 700; }
 td.best::after { content: " ●"; font-size: .6em; vertical-align: .25em; }
 .unit-cell { color: var(--ink-3); font-weight: 400; font-size: .85em; }
+/* 낱자(ㄳ ㄵ …)는 본문 크기로는 획이 뭉개져 보인다 */
+.jamo-cell { font-size: 1.35rem; font-weight: 700; }
 
 /* ---------------------------------------------------------------- 자판 */
 

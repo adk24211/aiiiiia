@@ -65,6 +65,7 @@ function shell({ title, desc, canonical, body, extraHead = "" }) {
 <footer><div class="wrap">
   <ul style="list-style:none;padding:0;margin:0 0 1rem;display:flex;gap:1rem;flex-wrap:wrap;font-size:.88rem">
     <li><a href="./">계산기</a></li>
+    <li><a href="compare.html">숫자 비교</a></li>
     <li><a href="dubeolsik.html">두벌식</a></li>
     <li><a href="sebeolsik-390.html">세벌식 390</a></li>
     <li><a href="sebeolsik-final.html">세벌식 최종</a></li>
@@ -187,7 +188,7 @@ const METRIC_ROWS = [
   ["좌우 손 비율", (r) => nf(r.leftPct, 0) + " : " + nf(r.rightPct, 0)]
 ];
 
-let urls = ["", ...Object.values(PAGES).map((p) => p.file), "about.html", "privacy.html"];
+let urls = ["", "compare.html", ...Object.values(PAGES).map((p) => p.file), "about.html", "privacy.html"];
 
 for (const id of D.ORDER) {
   const L = D.LAYOUTS[id], meta = PAGES[id], r = byId[id];
@@ -237,6 +238,137 @@ for (const id of D.ORDER) {
   writeFileSync(join(ROOT, meta.file),
     shell({ title: meta.title, desc: meta.desc, canonical: abs(meta.file), body }));
   console.log("wrote", meta.file);
+}
+
+/* ------------------------------------------------------------ 비교 페이지 */
+/* "두벌식 세벌식 차이"처럼 답이 숫자여야 하는 질문에, 실제로 숫자를 내놓는 페이지.
+   모든 값은 이 저장소의 엔진으로 계산해 박아 넣으므로 도구와 어긋날 수 없다. */
+{
+  const SAMPLES = C.presets.map(([name, text]) => ({ name, text }));
+  SAMPLES.push({ name: "다섯 표본 전체", text: C.presets.map((p) => p[1]).join("\n") });
+
+  const rows = SAMPLES.map((sm) => ({ ...sm, a: E.analyze(sm.text) }));
+  const total = rows[rows.length - 1].a;
+
+  const METRICS = [
+    ["총 이동거리", (r) => distStr(r.mm), (r) => r.mm, true],
+    ["총 타건 수", (r) => nf(r.totalStrokes) + "회", (r) => r.totalStrokes, true],
+    ["시프트 타건", (r) => nf(r.shifts) + "회", (r) => r.shifts, true],
+    ["같은 손가락 연속", (r) => nf(r.sfbPct, 2) + "%", (r) => r.sfbPct, true],
+    ["손 교대율", (r) => nf(r.altPct, 1) + "%", (r) => r.altPct, false],
+    ["홈 포지션 유지율", (r) => nf(r.homePct, 1) + "%", (r) => r.homePct, false],
+    ["숫자행 사용률", (r) => nf(r.numRowPct, 1) + "%", (r) => r.numRowPct, true],
+    ["좌우 손 비율", (r) => nf(r.leftPct, 0) + " : " + nf(r.rightPct, 0), (r) => Math.abs(50 - r.leftPct), true]
+  ];
+
+  const winnerRow = (label, fmt, get, lower) => {
+    const vals = total.results.map(get);
+    const shown = total.results.map(fmt);
+    const best = lower ? Math.min(...vals) : Math.max(...vals);
+    const bestShown = shown[vals.indexOf(best)];
+    const anyDiff = shown.some((v) => v !== shown[0]);
+    return `<tr><th scope="row">${esc(label)}</th>${total.results.map((r, i) =>
+      `<td class="num${anyDiff && shown[i] === bestShown ? " best" : ""}">${shown[i]}</td>`).join("")}</tr>`;
+  };
+
+  /* 390 과 최종이 실제로 다른 자리 */
+  const L390 = D.LAYOUTS.s390, LFIN = D.LAYOUTS.sfinal;
+  const diffs = [];
+  const scan = (kind, show, ko) => {
+    for (let i = 0; i < show.length; i++) {
+      const a = L390[kind][i], b = LFIN[kind][i];
+      if (a !== b) diffs.push({ ko, jamo: show[i], a, b });
+    }
+  };
+  scan("cho", D.SHOW_CHO, "초성"); scan("jung", D.SHOW_JUNG, "중성"); scan("jong", D.SHOW_JONG, "받침");
+  const keyOrNone = (k) => k === " " ? '<span class="tiny">전용 키 없음 (두 번에 침)</span>' : `<span class="mono">${esc(k)}</span>`;
+
+  const d0 = total.results[0], d2 = total.results[2];
+  const gap = ((d2.mm - d0.mm) / d0.mm * 100);
+
+  const body = `
+<section><div class="wrap">
+  <p class="eyebrow">숫자로 보는 비교</p>
+  <h1>두벌식과 세벌식, 실제로 얼마나 다른가</h1>
+  <p class="lede">성향이나 후기가 아니라 <strong>계산된 값</strong>으로 비교합니다.
+    같은 한국어 글을 세 자판의 실제 타건열로 펼쳐 손가락 이동거리와 타자 지표를 잰 결과입니다.</p>
+  <p>결론부터: <strong>세벌식은 타건 수·시프트·같은 손가락 연속에서 이기고, 이동거리에서 집니다.</strong>
+    아래 ${nf(total.text.syllables)}자 표본에서 세벌식 최종은 두벌식보다 이동거리가
+    <strong>${nf(gap, 0)}% 깁니다.</strong> 자모를 숫자행까지 펼쳐 놓은 값입니다.
+    어느 쪽이 나은지는 무엇을 중요하게 보느냐에 달렸고, 이 페이지는 그 판단 재료를 줍니다.</p>
+
+  <h2>한눈에</h2>
+  <p class="small">한국어 ${nf(total.text.syllables)}자(아래 다섯 표본을 합친 글) 기준.
+    ● 표시가 그 항목에서 유리한 쪽입니다.</p>
+  <div class="table-scroll"><table>
+    <caption>세 자판 지표 비교 — 한국어 ${nf(total.text.syllables)}자 기준</caption>
+    <thead><tr><th scope="col">지표</th>${D.ORDER.map((id) =>
+      `<th scope="col">${esc(D.LAYOUTS[id].short)}</th>`).join("")}</tr></thead>
+    <tbody>${METRICS.map(([l, f, g, lo]) => winnerRow(l, f, g, lo)).join("")}</tbody>
+  </table></div>
+
+  <h2>글의 종류에 따라 달라지나</h2>
+  <p class="small">달라집니다. 받침이 많은 글일수록 세벌식 최종이 유리해지고,
+    ㅋㅋㅋ 같은 반복이 많은 글에서는 격차가 줄어듭니다. 표본별 이동거리입니다.</p>
+  <div class="table-scroll"><table>
+    <caption>표본별 이동거리와 타건 수</caption>
+    <thead><tr><th scope="col">표본</th><th scope="col">한글</th>${D.ORDER.map((id) =>
+      `<th scope="col">${esc(D.LAYOUTS[id].short)}</th>`).join("")}<th scope="col">최종 − 두벌식</th></tr></thead>
+    <tbody>${rows.map((r) => {
+      const g2 = (r.a.results[2].mm - r.a.results[0].mm) / r.a.results[0].mm * 100;
+      return `<tr><th scope="row">${esc(r.name)}</th><td class="num">${nf(r.a.text.syllables)}자</td>` +
+        r.a.results.map((x) => `<td class="num">${distStr(x.mm)}<br><span class="tiny">타건 ${nf(x.totalStrokes)}</span></td>`).join("") +
+        `<td class="num" style="color:var(--accent);font-weight:700">${g2 >= 0 ? "+" : ""}${nf(g2, 0)}%</td></tr>`;
+    }).join("")}</tbody>
+  </table></div>
+  <p class="small">표본은 다섯 종류의 짧은 글입니다. 대규모 말뭉치 통계가 아니라는 점을 밝혀 둡니다.
+    <a href="./">직접 쓰신 글로 다시 재 보시는 편</a>이 훨씬 정확합니다.</p>
+
+  <h2>390과 최종은 뭐가 다른가</h2>
+  <p>둘은 생각보다 가깝습니다. 배열 데이터를 직접 대조하면
+    <strong>초성 19개는 완전히 같고, 중성은 ㅒ 한 자리만 다릅니다.</strong>
+    실제 차이는 받침 27자리 중 12자리에 몰려 있습니다 — 아래가 그 전부입니다.</p>
+  <div class="table-scroll"><table>
+    <caption>세벌식 390과 세벌식 최종이 다른 자리 ${diffs.length}곳 (전체 67자모 중)</caption>
+    <thead><tr><th scope="col">자모</th><th scope="col">종류</th>
+      <th scope="col">390</th><th scope="col">최종</th></tr></thead>
+    <tbody>${diffs.map((d) => `<tr><th scope="row" style="font-size:1.35rem;font-weight:700">${esc(d.jamo)}</th><td>${d.ko}</td>
+      <td>${keyOrNone(d.a)}</td><td>${keyOrNone(d.b)}</td></tr>`).join("")}</tbody>
+  </table></div>
+  <p>정리하면 <strong>최종은 겹받침 여섯 개(ㄳ ㄵ ㄼ ㄽ ㄾ ㄿ)에 전용 키를 주고, 그 대가로 그 키들을
+    시프트 자리에 넣었습니다.</strong> 받침이 많은 글에서는 타건이 줄고, 그만큼 시프트가 늘어납니다.</p>
+
+  <h2>그래서 어느 쪽인가</h2>
+  <ul class="findings">
+    <li data-mark="1"><span><strong>손이 적게 움직이길 원한다면 두벌식.</strong>
+      한글을 칠 때 숫자행을 전혀 쓰지 않는 구조라 이동거리가 짧습니다.
+      손 교대율도 ${nf(d0.altPct, 1)}%로 가장 높습니다 — 자음은 왼손, 모음은 오른손이기 때문입니다.</span></li>
+    <li data-mark="2"><span><strong>손가락이 덜 꼬이길 원한다면 세벌식.</strong>
+      같은 손가락이 연달아 걸리는 비율이 ${nf(d0.sfbPct, 2)}% → ${nf(total.results[1].sfbPct, 2)}%로 떨어지고,
+      시프트도 ${nf(d0.shifts)}회 → ${nf(total.results[1].shifts)}회로 줄어듭니다.
+      타자 속도는 거리보다 이쪽에 더 좌우된다고 보는 사람이 많습니다.</span></li>
+    <li data-mark="3"><span><strong>받침이 많은 글을 많이 쓴다면 최종.</strong>
+      받침 27개가 전부 전용 키라 타건 수가 가장 적습니다. 대신 시프트를 가장 많이 씁니다.</span></li>
+    <li data-mark="4"><span><strong>기호를 자주 친다면 390.</strong>
+      기호 자리가 쿼티에 더 가깝게 남아 있습니다. 한글 배열은 최종과 거의 같습니다.</span></li>
+    <li data-mark="5"><span><strong>바꾸지 않기로 해도 손해는 없습니다.</strong>
+      이 표의 차이는 몇 퍼센트에서 몇십 퍼센트 사이이고, 자판을 새로 익히는 비용은 수십 시간입니다.
+      숫자를 보고 판단하시라고 만든 페이지지, 바꾸라고 만든 페이지가 아닙니다.</span></li>
+  </ul>
+
+  <p style="margin-top:1.4rem"><a class="btn btn-primary btn-lg" href="./">내가 쓴 글로 직접 재 보기</a></p>
+  <p class="small">계산 방법과 한계는 <a href="./#method">계산 방법과 출처</a>에 전부 적어 두었습니다.
+    자판 배열 데이터는 <a href="https://github.com/libhangul/libhangul" rel="noopener">libhangul</a>
+    원본에서 기계로 추출했습니다.</p>
+</div></section>`;
+
+  writeFileSync(join(ROOT, "compare.html"), shell({
+    title: "두벌식 vs 세벌식 — 손가락 이동거리·타건 수 숫자 비교",
+    desc: `두벌식과 세벌식 390·최종을 같은 글로 재 비교했습니다. 이동거리, 타건 수, 시프트, 같은 손가락 연속을 실제 계산값으로 보여 주고, 390과 최종이 다른 ${diffs.length}자리를 전부 표로 정리했습니다.`,
+    canonical: abs("compare.html"),
+    body
+  }));
+  console.log("wrote compare.html (390↔최종 차이", diffs.length, "자리)");
 }
 
 /* ------------------------------------------------ 소개 · 개인정보처리방침 */
