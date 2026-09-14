@@ -74,29 +74,33 @@
 
   /* ------------------------------------------------- 자판 목록 만들기 */
 
-  function applySwaps(base, swaps) {
-    var map = {}, i, a, b, sa, sb;
-    for (i = 0; i < swaps.length; i++) {
-      a = swaps[i][0]; b = swaps[i][1];
-      map[a] = b; map[b] = a;
-      sa = E.SHIFT_OF[a]; sb = E.SHIFT_OF[b];
-      if (sa && sb) { map[sa] = sb; map[sb] = sa; }
-    }
+  /* 키 두 개를 맞바꾼 자판 하나를 돌려준다. */
+  function swapOnce(L, a, b) {
+    var map = {}, sa = E.SHIFT_OF[a], sb = E.SHIFT_OF[b];
+    map[a] = b; map[b] = a;
+    if (sa && sb) { map[sa] = sb; map[sb] = sa; }
     function tr(str) {
       var out = "", ch;
       for (var j = 0; j < str.length; j++) { ch = str.charAt(j); out += (map[ch] || ch); }
       return out;
     }
     var lead = null;
-    if (base.jungLead) {
-      lead = {};
-      for (var k in base.jungLead) lead[k] = map[base.jungLead[k]] || base.jungLead[k];
-    }
+    if (L.jungLead) { lead = {}; for (var k in L.jungLead) lead[k] = map[L.jungLead[k]] || L.jungLead[k]; }
+    return { id: L.id, name: L.name, short: L.short, note: L.note, twoSet: L.twoSet,
+             cho: tr(L.cho), jung: tr(L.jung), jong: tr(L.jong), jungLead: lead };
+  }
+
+  /* 교환 목록을 차례로 적용한다.
+     한 장의 맵으로 동시에 치환하면 키가 겹치는 두 교환(q⇄w 다음 w⇄e)에서
+     한 키에 자모가 둘 얹히고 다른 키는 비는, 실제로 칠 수 없는 자판이 만들어진다.
+     치환을 차례로 쌓으면 언제나 순열이라 그런 일이 없다. */
+  function applySwaps(base, swaps) {
+    var cur = base;
+    for (var i = 0; i < swaps.length; i++) cur = swapOnce(cur, swaps[i][0], swaps[i][1]);
     return {
       id: "custom", name: "내 배열", short: "내 배열",
       note: base.name + " 바탕 · " + swaps.length + "곳 교환",
-      twoSet: base.twoSet, cho: tr(base.cho), jung: tr(base.jung), jong: tr(base.jong),
-      jungLead: lead
+      twoSet: base.twoSet, cho: cur.cho, jung: cur.jung, jong: cur.jong, jungLead: cur.jungLead
     };
   }
 
@@ -130,12 +134,12 @@
 
   var MAX_CHARS = 1500000;      // 이 이상은 메모리·시간 모두 위험하다
   function compute() {
-    S.truncated = 0;
-    if (S.text.length > MAX_CHARS) {
-      S.truncated = S.text.length;
-      S.text = S.text.slice(0, MAX_CHARS);
-    }
-    S.last = E.analyze(S.text, {
+    // S.text 는 건드리지 않는다. 잘라서 계산하되 원래 길이를 계속 기억해야
+    // 옵션을 바꿔도 '앞 N자만 계산했다'는 고지가 사라지지 않는다.
+    var text = S.text;
+    S.truncated = text.length > MAX_CHARS ? text.length : 0;
+    if (S.truncated) text = text.slice(0, MAX_CHARS);
+    S.last = E.analyze(text, {
       layouts: layoutList(), model: S.opts.model,
       unit: S.opts.unit, leadStyle: S.opts.leadStyle
     });
@@ -745,6 +749,7 @@
   }
 
   window.KM_APP = { S: S, render: render, J: J, keyLabels: keyLabels, METRICS: METRICS,
+                    swapOnce: swapOnce, applySwaps: applySwaps, MAX_CHARS: MAX_CHARS,
                     hangulCount: hangulCount,
                     layoutSheetSvg: layoutSheetSvg, drawPoster: drawPoster,
                     layoutList: layoutList, renderSoon: renderSoon, dist: dist, distStr: distStr, nf: nf, esc: esc, store: store };

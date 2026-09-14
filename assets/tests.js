@@ -97,6 +97,43 @@
     });
     inv("이상 입력 12종 · NaN/무한/음수 없음", 0, bad.length);
 
+    // 배열 교환은 언제나 순열이어야 한다 (한 키에 자모 둘 / 빈 키가 생기면 안 된다)
+    (function () {
+      function swapOnce(L, a, b) {
+        var m = {}, sa = E.SHIFT_OF[a], sb = E.SHIFT_OF[b];
+        m[a] = b; m[b] = a;
+        if (sa && sb) { m[sa] = sb; m[sb] = sa; }
+        function tr(x) { var o = "", i; for (i = 0; i < x.length; i++) o += (m[x.charAt(i)] || x.charAt(i)); return o; }
+        return { twoSet: L.twoSet, cho: tr(L.cho), jung: tr(L.jung), jong: tr(L.jong), jungLead: L.jungLead };
+      }
+      function occ(l) {
+        var m = {}, i, k;
+        [l.cho, l.jung, l.jong].forEach(function (x) {
+          for (i = 0; i < x.length; i++) { k = x.charAt(i); if (k !== " ") m[k] = (m[k] || 0) + 1; }
+        });
+        return m;
+      }
+      var cases = [[["t", "l"], ["t", "j"]], [["q", "w"], ["w", "e"]],
+                   [["a", "s"], ["s", "d"], ["d", "f"], ["f", "g"]]];
+      var bad = 0;
+      D.ORDER.forEach(function (id) {
+        var L0 = L(id), n0 = Object.keys(occ(L0)).length;
+        cases.forEach(function (sw) {
+          var cur = L0;
+          sw.forEach(function (p) { cur = swapOnce(cur, p[0], p[1]); });
+          var o = occ(cur);
+          var dup = 0, k;
+          for (k in o) if (o[k] > 1) dup++;
+          if (dup || Object.keys(o).length !== n0) bad++;
+        });
+      });
+      inv("키 교환은 언제나 순열 (자판 3종 × 겹치는 교환 3종)", 0, bad);
+
+      // 같은 쌍을 두 번 적용하면 원래 자판으로 돌아온다
+      var t1 = swapOnce(swapOnce(L("dubeol"), "q", "w"), "q", "w");
+      inv("같은 교환 두 번 = 원본", L("dubeol").cho + "|" + L("dubeol").jung, t1.cho + "|" + t1.jung);
+    })();
+
     // 세벌식 겹모음 타법 토글이 실제로 키열을 바꾸는가
     inv("겹모음 앞자리 · 오른손 자리", "k/f", E.strokeString(L("sfinal"), "과"));
     E.setLeadStyle(false);

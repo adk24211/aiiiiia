@@ -37,6 +37,7 @@
   var src = $("#src");
   src.addEventListener("input", function () {
     S.text = src.value;
+    S.fromFile = false;                      // 직접 친 글만 링크에 담는다
     S.source = src.value.trim() ? "typed" : "demo";
     if (!src.value.trim()) S.text = DEMO_TEXT();
     S.kakaoLabel = ""; S.kakao = null;
@@ -104,6 +105,7 @@
       } else {
         S.kakao = null; $("#kakaoPanel").hidden = true;
         S.text = text; S.source = "typed"; S.kakaoLabel = "";
+        S.fromFile = true;                   // 파일에서 온 글 — 주소창에 넣지 않는다
         src.value = text.length > 20000 ? text.slice(0, 20000) : text;
         status.textContent = "카카오톡 형식이 아니어서 평문으로 계산했습니다.";
         A.render();
@@ -143,6 +145,11 @@
     var set = picked.length ? new Set(picked) : null;
     var from = $("#dateFrom").value ? new Date($("#dateFrom").value + "T00:00:00").getTime() : null;
     var to = $("#dateTo").value ? new Date($("#dateTo").value + "T23:59:59").getTime() : null;
+    if (from && to && from > to) {
+      $("#srcStatus").textContent = "시작 날짜가 끝 날짜보다 뒤입니다. 두 날짜를 바꿔 주세요.";
+      $("#dateFrom").focus();
+      return;
+    }
     S.text = window.KM_KAKAO.textOf(p, { speakers: set, from: from, to: to });
     S.source = "kakao";
     // 카톡 내보내기에는 화자가 "나"로 나오는 경우가 있다 — "나님"이 되지 않게
@@ -232,8 +239,21 @@
     $("#swapAdd").addEventListener("click", function () {
       var a = $("#swapA").value, b = $("#swapB").value;
       if (a === b) { msg("같은 키끼리는 바꿀 수 없습니다."); return; }
-      S.custom = S.custom && S.custom.baseId === baseId ? S.custom : { baseId: baseId, swaps: [] };
-      S.custom.swaps.push([a, b]);
+      if (S.custom && S.custom.baseId !== baseId) {
+        msg("지금 교환은 " + D.LAYOUTS[S.custom.baseId].name + " 바탕입니다. 바꾸려면 ‘되돌리기’를 먼저 누르세요.");
+        return;
+      }
+      S.custom = S.custom || { baseId: baseId, swaps: [] };
+      // 같은 쌍을 다시 누르면 취소된다 (순서는 상관없다)
+      var at = -1, i;
+      for (i = 0; i < S.custom.swaps.length; i++) {
+        var p = S.custom.swaps[i];
+        if ((p[0] === a && p[1] === b) || (p[0] === b && p[1] === a)) { at = i; break; }
+      }
+      if (at >= 0) S.custom.swaps.splice(at, 1);
+      else S.custom.swaps.push([a, b]);
+      if (!S.custom.swaps.length) S.custom = null;
+      clearOptimizer();
       afterSwapChange();
     });
     $("#autoFind").addEventListener("click", runOptimizer);
@@ -278,14 +298,21 @@
 
   /* 두 키를 바꿔 이동거리가 얼마나 주는지 전수 탐색 (표본 8천 자, 청크 처리) */
   var optRunning = false;
+  function clearOptimizer() { var o = $("#autoOut"); if (o) o.innerHTML = ""; }
+
   function runOptimizer() {
     if (optRunning) return;
-    var baseId = $("#editorBase").value, L = D.LAYOUTS[baseId];
+    var baseId = $("#editorBase").value;
+    // 이미 바꾼 키가 있으면 그 결과(내 배열)를 기준으로 다음 교환을 찾는다.
+    // 원본 기준으로 찾으면 "13% 줄어듭니다"가 두 번째 적용부터 맞지 않는다.
+    var L = (S.custom && S.custom.baseId === baseId && S.custom.swaps.length)
+      ? A.applySwaps(D.LAYOUTS[baseId], S.custom.swaps)
+      : D.LAYOUTS[baseId];
     var text = S.text.length > 8000 ? S.text.slice(0, 8000) : S.text;
     var dec = E.decompose(text);
     if (!dec.length) { $("#autoOut").innerHTML = '<p class="small">계산할 한글이 없습니다.</p>'; return; }
 
-    var keys = keysOf(L);
+    var keys = keysOf(D.LAYOUTS[baseId]);
     var pairs = [];
     for (var i = 0; i < keys.length; i++)
       for (var j = i + 1; j < keys.length; j++) pairs.push([keys[i], keys[j]]);
@@ -305,7 +332,7 @@
       if (!prog || !bar) { stop(); return; }      // 그 사이에 편집기가 다시 그려졌다
       var end = Math.min(pairs.length, idx + CH);
       for (; idx < end; idx++) {
-        var swapped = swapLayout(L, [pairs[idx]]);
+        var swapped = A.swapOnce(L, pairs[idx][0], pairs[idx][1]);
         var mm = E.measure(E.compile(swapped), dec, opt).mm;
         if (mm < baseMM) results.push({ pair: pairs[idx], mm: mm, gain: (baseMM - mm) / baseMM * 100 });
       }
@@ -318,21 +345,6 @@
       showOptimizer(results.slice(0, 5), pairs.length, L, text.length);
     }
     requestAnimationFrame(step);
-  }
-
-  function swapLayout(base, swaps) {
-    var map = {}, i, a, b, sa, sb;
-    for (i = 0; i < swaps.length; i++) {
-      a = swaps[i][0]; b = swaps[i][1];
-      map[a] = b; map[b] = a;
-      sa = E.SHIFT_OF[a]; sb = E.SHIFT_OF[b];
-      if (sa && sb) { map[sa] = sb; map[sb] = sa; }
-    }
-    function tr(s) { var o = "", c; for (var k = 0; k < s.length; k++) { c = s.charAt(k); o += (map[c] || c); } return o; }
-    var lead = null;
-    if (base.jungLead) { lead = {}; for (var q in base.jungLead) lead[q] = map[base.jungLead[q]] || base.jungLead[q]; }
-    return { id: "tmp", name: "임시", short: "임시", twoSet: base.twoSet,
-             cho: tr(base.cho), jung: tr(base.jung), jong: tr(base.jong), jungLead: lead };
   }
 
   function showOptimizer(top, tried, L, sampleLen) {
@@ -357,7 +369,10 @@
         S.custom = S.custom && S.custom.baseId === $("#editorBase").value
           ? S.custom : { baseId: $("#editorBase").value, swaps: [] };
         S.custom.swaps.push(r.pair);
+        // 남은 제안은 적용 전 배열 기준이라 이제 맞지 않는다. 지우고 다시 찾게 한다.
+        clearOptimizer();
         afterSwapChange();
+        msg("적용했습니다. 이어서 더 줄이려면 ‘거리를 줄이는 교환 찾아보기’를 다시 누르세요.");
       });
     });
   }
@@ -380,7 +395,12 @@
   $("#copyLink").addEventListener("click", function () {
     writeHash();
     var url = location.href;
-    var done = function () { $("#shareMsg").textContent = "링크를 복사했습니다."; };
+    var hasText = url.indexOf("#") >= 0 && url.indexOf("t=") > url.indexOf("#");
+    var done = function () {
+      $("#shareMsg").textContent = hasText
+        ? "링크를 복사했습니다. 이 링크에는 붙여 넣으신 글이 함께 담겨 있습니다."
+        : "링크를 복사했습니다. 글 내용은 담기지 않았습니다.";
+    };
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done, fallback);
     else fallback();
     function fallback() {
@@ -396,7 +416,8 @@
 
   function writeHash() {
     var parts = [];
-    if (S.source === "typed" && S.text && S.text.length <= 2000)
+    // 카톡이나 파일에서 온 글은 어떤 경우에도 주소창에 담지 않는다.
+    if (S.source === "typed" && !S.fromFile && S.text && S.text.length <= 2000)
       parts.push("t=" + encodeURIComponent(S.text));
     if (S.custom && S.custom.swaps.length) {
       parts.push("b=" + S.custom.baseId);
@@ -419,7 +440,7 @@
     });
     var used = false;
     if (q.t) { S.text = q.t; S.source = "typed"; src.value = q.t; used = true; }
-    if (q.b && D.LAYOUTS[q.b] && q.s) {
+    if (q.b && Object.prototype.hasOwnProperty.call(D.LAYOUTS, q.b) && q.s) {
       var swaps = q.s.split(",").filter(function (p) { return p.length === 2; })
         .map(function (p) { return [p.charAt(0), p.charAt(1)]; });
       if (swaps.length) { S.custom = { baseId: q.b, swaps: swaps }; used = true; }
@@ -633,7 +654,11 @@
   })();
 
   function readHashInit() {
-    if (!readHash()) src.value = S.text;    // 빈 상태 금지 — 무엇을 재고 있는지 바로 보이게
+    readHash();
+    if (!S.text) S.text = DEMO_TEXT();
+    src.value = S.text;                      // 빈 상태 금지 — 무엇을 재고 있는지 바로 보이게
+    // 링크에 담겨 온 교환의 바탕 배열에 편집기를 맞춘다 (안 맞추면 다음 교환에서 통째로 버려진다)
+    if (S.custom && D.LAYOUTS[S.custom.baseId]) $("#editorBase").value = S.custom.baseId;
   }
   try { readHashInit(); } catch (e) { /* 링크가 깨져도 도구는 떠야 한다 */ }
   renderLongform();
